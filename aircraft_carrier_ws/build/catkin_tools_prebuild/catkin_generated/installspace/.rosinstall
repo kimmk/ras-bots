@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/sebastian/ros/aircraft_carrier_ws/install/setup.sh
