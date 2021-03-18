@@ -11,11 +11,11 @@ Kimmo Korpelin – [kikkor@utu.fi](mailto:kikkor@utu.fi)
 Daniel Montero – [daanmh@utu.fi](mailto:daanmh@utu.fi)
 Gabriel Pirlogeanu - [gabriel.g.pirlogeanu@utu.fi](mailto:gabriel.g.pirlogeanu@utu.fi)
 
-1. Application / Use-case
+2. Application / Use-case
 
 We want to combine navigating through an unknown environment with a combination of drone and Jetbot movement, where part of the environment might be inaccessible to either of the robots.
 
-3.The system
+3. The system
 
 Landing the drone on top of the Jetbot also requires synchronized positioning.
 
@@ -62,11 +62,11 @@ Communication happens through ROS and there should be a constant flow of informa
 
 ![](RackMultipart20210318-4-kzcb9b_html_7883d5d9a911491d.png)
 
-1. GitHub repo link
+4. GitHub repo link
 
 [https://github.com/kimmk/ras-bots](https://github.com/kimmk/ras-bots)
 
-1. Background
+5. Background
 
 The team already has some experience receiving data from a robot to a laptop using ROS topics, so we are confident that the communication part will part, however, we have not done communication between robots in the past.
 
@@ -74,7 +74,7 @@ We&#39;re also somewhat confident of the LIDAR-SLAM Potential Fields driving and
 
 Finally, the drone &quot;discovery&quot; path is one of the riskiest parts of the project. While we have successfully received and transformed data from a drone in the past, we have yet to make a &quot;search &amp; find&quot; functionality.
 
-1. Expected challenges and wishes to learn
+6. Expected challenges and wishes to learn
 
 Main expected challenge is the &quot;search &amp; find&quot; algorithm.
 
@@ -84,7 +84,7 @@ We would like to know more about path-planning and obstacle avoidance if possibl
 
 One known challenge is getting quality imagery from the drone, since the data tends to be poor.
 
-1. Team roles
+7. Team roles
 
 - Sebastian
   - Physical modification of the Jetbot
@@ -100,7 +100,7 @@ One known challenge is getting quality imagery from the drone, since the data te
   - SLAM (Mapping room with LIDAR)
   - Jetbot Autonomous Movement
 
-1. Work packages (how is the work going to be divided among team members and in time), with tentative project schedule.
+8. Work packages (how is the work going to be divided among team members and in time), with tentative project schedule.
 
 - SLAM (Mapping room with LIDAR)
 - Jetbot Command
@@ -111,6 +111,6 @@ One known challenge is getting quality imagery from the drone, since the data te
 - Drone Search&amp;Find Algorithm
 - Landing Algorithm (Jetbot Camera)
 
-1. Description of final experiment or demonstration.
+9. Description of final experiment or demonstration.
 
 We let the Jetbot with the docked Drone into a space. The Jetbot drives around and eventually settles. Jetbot commands the Drone around to do discovery, and once the goal is reached (fiducial finding), the Drone is autonomously landed on the Jetbot, and the Jetbot can leave.
