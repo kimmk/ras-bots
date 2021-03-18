@@ -1,1 +1,0 @@
-/home/sebastian/ros/aircraft_carrier_ws/devel/.private/catkin_tools_prebuild/local_setup.zsh
