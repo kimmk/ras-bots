@@ -1,0 +1,6 @@
+devel_space: /home/sebastian/ros/aircraft_carrier_ws/devel
+install: false
+install_space: /home/sebastian/ros/aircraft_carrier_ws/install
+profile: default
+source_space: /home/sebastian/ros/aircraft_carrier_ws/src
+workspace: /home/sebastian/ros/aircraft_carrier_ws
