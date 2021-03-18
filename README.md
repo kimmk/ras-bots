@@ -2,8 +2,11 @@
 
 ## 1. Team name and team members (up to 4 persons/team)
 Sebastian Icking - [sealic@utu.fi](mailto:sealic@utu.fi)
+
 Kimmo Korpelin – [kikkor@utu.fi](mailto:kikkor@utu.fi)
+
 Daniel Montero – [daanmh@utu.fi](mailto:daanmh@utu.fi)
+
 Gabriel Pirlogeanu - [gapirl@utu.fi](mailto:gapirl@utu.fi)
 
 ## 2. Application / Use-case
