@@ -7,10 +7,9 @@ Upload also a copy to GitHub in Markdown format.
 1. Team name and team members (up to 4 persons/team)
 
 Sebastian Icking - [sealic@utu.fi](mailto:sealic@utu.fi)
- Kimmo Korpelin – [kikkor@utu.fi](mailto:kikkor@utu.fi)
-
+Kimmo Korpelin – [kikkor@utu.fi](mailto:kikkor@utu.fi)
 Daniel Montero – [daanmh@utu.fi](mailto:daanmh@utu.fi)
- Gabriel Pirlogeanu - [gabriel.g.pirlogeanu@utu.fi](mailto:gabriel.g.pirlogeanu@utu.fi)
+Gabriel Pirlogeanu - [gabriel.g.pirlogeanu@utu.fi](mailto:gabriel.g.pirlogeanu@utu.fi)
 
 1. Application / Use-case
 
@@ -36,30 +35,30 @@ LIDAR sensor and Cameras for the Jetbot
 
 Most communication should happen through ROS topics, as it&#39;s the most stable way to send camera information.
 
-- **Algorithms:**
-  - **Lidar:**
-    - SLAM
-    - Potential Fields (Jetbot avoidance)
-  - **Visual:**
-    - Landing algorithm
-    - Fiducial recognition
-    - Drone search/navigation algorithm
+  - **Algorithms:**
+    - **Lidar:**
+      - SLAM
+      - Potential Fields (Jetbot avoidance)
+    - **Visual:**
+      - Landing algorithm
+      - Fiducial recognition
+      - Drone search/navigation algorithm
 
 - Data flow:
 
 Communication happens through ROS and there should be a constant flow of information between Drone and Jetbot. The Jetbot makes decisions and commands the Drone to move around.
 
-- Jetbot-LIDAR
-  - Sensor data is processed to allow Jetbot to move around
-  - Jetbot decides on resting place
-  - Jetbot commands the Drone for take off
-- Drone-Camera
-  - Drone streams camera data to Jetbot
-  - Jetbot instructs the Drone to move around for Discovery
-  - Jetbot recognizes Fiducial and instructs Drone to come back
-- Jetbot-Camera
-  - Once the Drone is in the field of view, send commands to correct positioning
-  - Jetbot commands Drone to land
+  - Jetbot-LIDAR
+    - Sensor data is processed to allow Jetbot to move around
+    - Jetbot decides on resting place
+    - Jetbot commands the Drone for take off
+  - Drone-Camera
+    - Drone streams camera data to Jetbot
+    - Jetbot instructs the Drone to move around for Discovery
+    - Jetbot recognizes Fiducial and instructs Drone to come back
+  - Jetbot-Camera
+    - Once the Drone is in the field of view, send commands to correct positioning
+    - Jetbot commands Drone to land
 
 ![](RackMultipart20210318-4-kzcb9b_html_7883d5d9a911491d.png)
 
