@@ -1,3 +1,7 @@
+# Instructions
+WIP
+
+
 # Open Project Plan: Aircraft Carrier & Discovery
 
 ## 1. Team name and team members (up to 4 persons/team)
@@ -88,18 +92,7 @@ Another known challenge is getting quality imagery from the drone, since the dat
 
 ## 8. Work packages (how is the work going to be divided among team members and in time), with tentative project schedule.
 
-  Tentative Project Schedule is a WIP at this time.
-
-|  Package                         | Tentative Time       | Progress                    |
-|----------------------------------|----------------------|-----------------------------|
-|SLAM (Mapping room with LIDAR)    | |WIP|
-|Jetbot Command                    | |WIP|
-|Jetbot Autonomous Movement        | |WIP|
-|Fiducial Interpretations          | |WIP|
-|Drone Command                     | |WIP|
-|Drone Data Interpretation         | |WIP|
-|Drone Search&amp;Find Algorithm   | |WIP|
-|Landing Algorithm (Jetbot Camera) | |WIP|
+  Tentative Project Schedule: [Drive GANTT](https://docs.google.com/spreadsheets/d/1XahKZe0qL9Kq-8Cc7oUSd-BmwO9jYJjiQDrlhUxS5nU/edit?usp=sharing)
 
 ## 9. Description of final experiment or demonstration.
 We let the Jetbot with the docked Drone into a space. The Jetbot drives around and eventually settles. Jetbot commands the Drone around to do discovery, and once the goal is reached (fiducial finding), the Drone is autonomously landed on the Jetbot, and the Jetbot can leave.
