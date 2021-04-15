@@ -6,12 +6,33 @@ from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import matplotlib.pyplot as plt
 import rospy
+from sensor_msgs.msg import Image
+from std_msgs.msg import Float64
+
+bridge = CvBridge()
 
 class GateDetector:
-    def update(self, timer):
-        img = cv2.imread("gate3.png")
+    def __init__(self):
+        self.gate_img = rospy.Publisher("gate_img", Image, queue_size=10)       # Debug image of gate vision
+        self.gate_angle = rospy.Publisher("gate_angle", Float64, queue_size=10) # Estimated angle to gate
+        self.gate_dist = rospy.Publisher("gate_dist", Float64, queue_size=10)   # Estimated distance to gate
+        rospy.Subscriber("/image", Image, self.camera_callback)                 # Tello camera image
+
+    def test_image(self, filepath):
+        img = cv2.imread(filepath)
         img = imutils.resize(img, width=600)
         self.detect_gate(img)
+
+    def camera_callback(self, img):
+        try:
+            cv2_img = bridge.imgmsg_to_cv2(msg, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+        else:
+            angle,dist = self.detect_gate(cv2_img)
+            if angle != -1:
+                self.gate_angle.publish(angle)
+                self.gate_dist.publish(dist)
 
     def imshow_bgr(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -46,6 +67,8 @@ class GateDetector:
         # Get gate contours
         cnts = cv2.findContours(gate_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         im_cnts = imutils.grab_contours(cnts)
+        if debug_img:
+            cv2.drawContours(img, im_cnts, -1, (0, 255, 0), 2)
 
         # Select largest gate feature from image
         gate_idx = -1
@@ -60,6 +83,8 @@ class GateDetector:
                 gate_idx = idx
 
         # If found, try to approximate gate as a 4-gon
+        angle = -1
+        dist = -1
         if gate_idx != -1:
             points = im_cnts[gate_idx]
             epsilon = 0.05*cv2.arcLength(points,True)
@@ -67,17 +92,28 @@ class GateDetector:
             if debug_img:
                 cv2.drawContours(img,[approx],0,(255,0,0),2)
             if len(approx) == 4:
-                if debug_img:
-                    for corner in approx:
-                        cv2.circle(img, tuple(corner[0]), 4, (255,255,255), -1)
+                box = [c[0] for c in approx] # resolve annoying lists within list
+                box.sort(key=lambda p: p[0]) # sort points by x coordinate
 
-        #cv2.drawContours(img, im_cnts, -1, (0, 255, 0), 2)
+                if debug_img:
+                    for i, coord in enumerate(box):
+                        p = tuple(coord)
+                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        #cv2.circle(img, p, 4, (255,255,255), -1)
+                
+                h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
+                h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
+                angle = h0/h1
+                print("ratio: ", h0/h1)
+        
         if debug_img:
             self.imshow_bgr(img)
+            self.gate_img.publish(bridge.cv2_to_imgmsg(img))
+
+        return angle, dist
 
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
     gate = GateDetector()
-    #rospy.Timer(rospy.Duration(1), gate.update)
     #rospy.spin()
-    gate.update(None)
+    gate.test_image("gate.png")
