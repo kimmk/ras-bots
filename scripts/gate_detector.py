@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import cv2
 import imutils
 from cv_bridge import CvBridge, CvBridgeError
@@ -20,8 +21,13 @@ class GateDetector:
 
     def test_image(self, filepath):
         img = cv2.imread(filepath)
-        img = imutils.resize(img, width=600)
-        self.detect_gate(img)
+        if img is not None:
+            img = imutils.resize(img, width=600)
+            self.detect_gate(img)
+
+    def test_images(self, path):
+        for file in os.listdir(path):
+            self.test_image(path+"/"+file)
 
     def camera_callback(self, img):
         try:
@@ -119,4 +125,5 @@ if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
     gate = GateDetector()
     #rospy.spin()
-    gate.test_image("gate.png")
+    #gate.test_image("gate.png")
+    gate.test_images("../images/tello_gates")
