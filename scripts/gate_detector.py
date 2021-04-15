@@ -116,8 +116,8 @@ class GateDetector:
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
                 gate_angle = h0/h1
                 if debug_img:
-                    p = (img.shape[0]*1//4,img.shape[1]*2//3)
-                    cv2.putText(img, f"angle: {gate_angle}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                    p = (img.shape[0]*1//3,img.shape[1]*2//3)
+                    cv2.putText(img, f"angle: {gate_angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 print("ratio: ", gate_angle)
         
         if debug_img:
