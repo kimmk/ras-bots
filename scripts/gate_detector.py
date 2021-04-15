@@ -35,7 +35,7 @@ class GateDetector:
         except CvBridgeError as e:
             print(e)
         else:
-            angle,dist = self.detect_gate(cv2_img)
+            angle,dist,center = self.detect_gate(cv2_img)
             if angle != -1:
                 self.gate_angle.publish(angle)
                 self.gate_dist.publish(dist)
@@ -77,8 +77,10 @@ class GateDetector:
             cv2.drawContours(img, im_cnts, -1, (0, 255, 0), 2)
 
         # Select largest gate feature from image
-        gate_idx = -1
+        gate_idx = 0
         biggest_box = 0
+        box_ratio = 0
+        gate_center = (0,0)
         for idx, points in enumerate(im_cnts):
             x,y,w,h = cv2.boundingRect(points)
             box_sz = w*h
@@ -87,11 +89,13 @@ class GateDetector:
             if box_sz > biggest_box:
                 biggest_box = box_sz
                 gate_idx = idx
+                box_ratio = w/h
+                gate_center = (x+w//2,y+h//2)
 
         # If found, try to approximate gate as a 4-gon
-        angle = -1
-        dist = -1
-        if gate_idx != -1:
+        gate_angle = -1
+        gate_dist = -1
+        if gate_idx != -1 and box_ratio > 0.3 and box_ratio < 3.0:
             points = im_cnts[gate_idx]
             epsilon = 0.05*cv2.arcLength(points,True)
             approx = cv2.approxPolyDP(points,epsilon,True)
@@ -104,22 +108,23 @@ class GateDetector:
                 if debug_img:
                     for i, coord in enumerate(box):
                         p = tuple(coord)
-                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                         #cv2.circle(img, p, 4, (255,255,255), -1)
-                
+                    cv2.circle(img, gate_center, 4, (255,255,255), -1)
+
                 h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
-                angle = h0/h1
+                gate_angle = h0/h1
                 if debug_img:
-                    p = (img.shape[0]*1//3,img.shape[1]*2//3)
-                    cv2.putText(img, f"angle: {angle}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                print("ratio: ", angle)
+                    p = (img.shape[0]*1//4,img.shape[1]*2//3)
+                    cv2.putText(img, f"angle: {gate_angle}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                print("ratio: ", gate_angle)
         
         if debug_img:
             self.imshow_bgr(img)
             self.gate_img.publish(bridge.cv2_to_imgmsg(img))
 
-        return angle, dist
+        return gate_angle, gate_dist, gate_center
 
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
