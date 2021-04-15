@@ -98,13 +98,16 @@ class GateDetector:
                 if debug_img:
                     for i, coord in enumerate(box):
                         p = tuple(coord)
-                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                         #cv2.circle(img, p, 4, (255,255,255), -1)
                 
                 h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
                 angle = h0/h1
-                print("ratio: ", h0/h1)
+                if debug_img:
+                    p = (img.shape[0]*1//3,img.shape[1]*2//3)
+                    cv2.putText(img, f"angle: {angle}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                print("ratio: ", angle)
         
         if debug_img:
             self.imshow_bgr(img)
