@@ -12,6 +12,20 @@ from std_msgs.msg import Float64
 
 bridge = CvBridge()
 
+def add_bboxes(a, b):
+    # x, y, w, h
+    x = min(a[0], b[0])
+    y = min(a[1], b[1])
+    a_xmax = a[0] + a[2]
+    a_ymax = a[1] + a[3]
+    b_xmax = b[0] + b[2]
+    b_ymax = b[1] + b[3]
+    xmax = max(a_xmax, b_xmax)
+    ymax = max(a_ymax, b_ymax)
+    w = xmax-x
+    h = ymax-y
+    return (x,y,w,h)
+
 class GateDetector:
     def __init__(self):
         self.gate_img = rospy.Publisher("gate_img", Image, queue_size=10)       # Debug image of gate vision
@@ -35,8 +49,9 @@ class GateDetector:
         except CvBridgeError as e:
             print(e)
         else:
-            angle,dist,center = self.detect_gate(cv2_img)
-            if angle != -1:
+            gate = self.detect_gate(cv2_img)
+            if gate:
+                angle,dist,center = gate
                 self.gate_angle.publish(angle)
                 self.gate_dist.publish(dist)
 
@@ -63,9 +78,59 @@ class GateDetector:
         gray = cv2.split(img_masked)[2]
         return cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)[1]
 
+    def find_gate_4gon(self, cnts, debug_img=None):
+        # Select largest contour by it's bounding box
+        gate_points = None
+        gate_center = None
+        biggest_box = 0
+        box_ratio = 0
+        for points in cnts:
+            x,y,w,h = cv2.boundingRect(points)
+            box_sz = w*h
+            if debug_img is not None:
+                cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
+            if box_sz > biggest_box:
+                biggest_box = box_sz
+                box_ratio = w/h
+                gate_points = points
+                gate_center = (x+w//2,y+h//2)
+
+        # If found, try to approximate gate as a 4-gon
+        if gate_points is not None and box_ratio > 0.3 and box_ratio < 3.0:
+            epsilon = 0.05*cv2.arcLength(gate_points,True)
+            approx = cv2.approxPolyDP(gate_points,epsilon,True)
+            if debug_img is not None:
+                cv2.drawContours(debug_img,[approx],0,(255,0,0),2)
+            if len(approx) == 4:
+                box = [c[0] for c in approx] # resolve annoying lists within list
+                box.sort(key=lambda p: p[0]) # sort points by x coordinate
+
+                if debug_img is not None:
+                    for i, coord in enumerate(box):
+                        p = tuple(coord)
+                        cv2.putText(debug_img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                        #cv2.circle(img, p, 4, (255,255,255), -1)
+                    cv2.circle(debug_img, gate_center, 4, (255,255,255), -1)
+
+                h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
+                h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
+                gate_angle = h0/h1
+                if debug_img is not None:
+                    p = (debug_img.shape[0]*1//3,debug_img.shape[1]*2//3)
+                    cv2.putText(debug_img, f"angle: {gate_angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                print("ratio: ", gate_angle)
+                return (gate_angle, -1, gate_center)
+        return None
+
+    def find_gate_5gon(self, cnts, debug_img):
+        return None
+
     def detect_gate(self, img):
-        #debug_img = rospy.get_param("debug_img")
-        debug_img = True
+        gate = None
+
+        draw_debug_img = True #rospy.get_param("draw_debug_img")
+        if draw_debug_img:
+           debug_img = img
 
         # Filter 'gate' features from image
         gate_img = self.filter_gates(img)
@@ -73,58 +138,55 @@ class GateDetector:
         # Get gate contours
         cnts = cv2.findContours(gate_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         im_cnts = imutils.grab_contours(cnts)
-        if debug_img:
-            cv2.drawContours(img, im_cnts, -1, (0, 255, 0), 2)
+        if debug_img is not None:
+            cv2.drawContours(debug_img, im_cnts, -1, (0, 255, 0), 2)
 
-        # Select largest gate feature from image
-        gate_idx = 0
-        biggest_box = 0
-        box_ratio = 0
-        gate_center = (0,0)
-        for idx, points in enumerate(im_cnts):
-            x,y,w,h = cv2.boundingRect(points)
-            box_sz = w*h
-            if debug_img:
-                cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
-            if box_sz > biggest_box:
-                biggest_box = box_sz
-                gate_idx = idx
-                box_ratio = w/h
-                gate_center = (x+w//2,y+h//2)
+        # Find gates
+        gate = self.find_gate_4gon(im_cnts, debug_img)
+        if gate is None:
+            gate = self.find_gate_5gon(im_cnts, debug_img)
 
-        # If found, try to approximate gate as a 4-gon
-        gate_angle = -1
-        gate_dist = -1
-        if gate_idx != -1 and box_ratio > 0.3 and box_ratio < 3.0:
-            points = im_cnts[gate_idx]
-            epsilon = 0.05*cv2.arcLength(points,True)
-            approx = cv2.approxPolyDP(points,epsilon,True)
-            if debug_img:
-                cv2.drawContours(img,[approx],0,(255,0,0),2)
-            if len(approx) == 4:
-                box = [c[0] for c in approx] # resolve annoying lists within list
-                box.sort(key=lambda p: p[0]) # sort points by x coordinate
+        if debug_img is not None:
+            self.imshow_bgr(debug_img)
+            self.gate_img.publish(bridge.cv2_to_imgmsg(debug_img))
 
-                if debug_img:
-                    for i, coord in enumerate(box):
-                        p = tuple(coord)
-                        cv2.putText(img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                        #cv2.circle(img, p, 4, (255,255,255), -1)
-                    cv2.circle(img, gate_center, 4, (255,255,255), -1)
+        return gate
 
-                h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
-                h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
-                gate_angle = h0/h1
-                if debug_img:
-                    p = (img.shape[0]*1//3,img.shape[1]*2//3)
-                    cv2.putText(img, f"angle: {gate_angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                print("ratio: ", gate_angle)
-        
-        if debug_img:
-            self.imshow_bgr(img)
-            self.gate_img.publish(bridge.cv2_to_imgmsg(img))
+    def detect_gate_bbox(self, img):
+        draw_debug_img = True #rospy.get_param("draw_debug_img")
+        if draw_debug_img:
+           debug_img = img
 
-        return gate_angle, gate_dist, gate_center
+        gate = None
+
+        # Filter 'gate' features from image
+        gate_img = self.filter_gates(img)
+
+        # Get gate contours
+        cnts = cv2.findContours(gate_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        im_cnts = imutils.grab_contours(cnts)
+
+        # Get gate contour bboxes
+        bboxes = [cv2.boundingRect(points) for points in im_cnts]
+
+        # Remove little bboxes
+        bboxes = [b for b in bboxes if b[2] > 30 and b[3] > 30]
+
+        # Combine close enough bboxes
+        combi_bboxes = []
+        combi_range = img.shape[0]*0.3
+        for b in bboxes:
+            print(b)
+
+        b = add_bboxes(bboxes[0], bboxes[1])
+        x,y,w,h = b
+
+        if debug_img is not None:
+            cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
+            cv2.drawContours(debug_img, im_cnts, -1, (0, 255, 0), 2)
+            self.imshow_bgr(debug_img)
+
+        return gate
 
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
