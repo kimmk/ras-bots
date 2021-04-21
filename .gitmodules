@@ -1,3 +1,0 @@
-[submodule "src/tello-driver-ros"] 
-  path = src/tello-driver-ros
-  url = git@github.com:TIERS/tello-driver-ros.git
