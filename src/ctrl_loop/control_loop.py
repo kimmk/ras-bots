@@ -3,16 +3,19 @@ import sys
 import rospy
 
 """ Scripts """
-from scrits import controls
-
+from scripts import controls
 """ ROS Messages """
 from std_msgs.msg import Empty
+""" Others """
+from control_state import ControlState 
 
 """
 Main Control Machine State Loop
+
 """
 
 def main():
+
     print('CTRL-LOOP INIT')
 
 
