@@ -1,7 +1,22 @@
-# Instructions
-WIP
+# Instructions - WIP
+Necessary installations:
 
+Drone related drivers and dependencies.
+Installation of TIERS' ROS Driver and Python Driver.
 
+```cd ~/ras-bots/src
+git clone --recursive https://github.com/TIERS/tello-driver-ros.git
+sudo apt install ros-melodic-camera-info-manager-py ros-melodic-codec-image-transport python-catkin-tools python3-dev python3-pip python-dev python-pip
+sudo -H pip3 install --upgrade pip
+sudo -H pip3 install https://github.com/damiafuentes/DJITelloPy/archive/master.zip
+```
+Building the project
+
+```
+cd ~/ras-bots
+catkin init
+catkin build
+```
 # Open Project Plan: Aircraft Carrier & Discovery
 
 ## 1. Team name and team members (up to 4 persons/team)
