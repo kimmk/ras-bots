@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import os
+import sys
+import signal
 import cv2
 import imutils
 from cv_bridge import CvBridge, CvBridgeError
@@ -188,7 +190,11 @@ class GateDetector:
 
         return gate
 
+def handle_exit(signum, frame):
+    sys.exit(0)
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, handle_exit)
     rospy.init_node('gate_detector', anonymous=True)
     gate = GateDetector()
     #rospy.spin()
