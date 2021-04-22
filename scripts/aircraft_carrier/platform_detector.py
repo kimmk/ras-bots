@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import rospy
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64
+import drone_controller
 
 bridge = CvBridge()
 
@@ -29,7 +30,13 @@ class platformDetector:
         img = cv2.imread(filepath)
         if img is not None:
             img = imutils.resize(img, width=600)
-            self.detect_platform(img)
+            center = self.detect_platform(img)
+            
+            print("centerx")
+            print(center)
+            #putting this here is kinda spaghettiying
+            if center is not None:
+                dronecontrol.fly_to_platform(center)
 
     def test_images(self, path):
         #for i in range(0,100):
@@ -53,10 +60,15 @@ class platformDetector:
         except CvBridgeError as e:
             print(e)
         else:
-            angle,dist,center = self.detect_platform(cv2_img)
-            if angle != -1:
-                self.platform_angle.publish(angle)
-                self.platform_dist.publish(dist)
+            center = self.detect_platform(cv2_img)
+            
+            
+            #putting this here is kinda spaghettiying
+            if center is not None:
+                dronecontrol.fly_to_platform(center)
+            #if angle != -1:
+            #    self.platform_angle.publish(angle)
+            #    self.platform_dist.publish(dist)
 
     def imshow_bgr(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -118,6 +130,8 @@ class platformDetector:
                 im_cnts.append(cnts[0][i])
         #im_cnts = imutils.grab_contours(cnts)
         print(im_cnts)
+        if len(im_cnts)==0:
+            return None
         
         if debug_img:
             cv2.drawContours(img, im_cnts, -1, (0, 255, 0), 2)
@@ -150,13 +164,18 @@ class platformDetector:
                 platform_idx = idx
                 box_ratio = w/h
                 platform_center = (x+w//2,y+h//2)
-
+        
+        platform_center_x = platform_center[0]
+        width = img.shape[1]
+        #print("width" + str(width))
+        #print(platform_center_x)
+        platform_center_x = (platform_center_x-(width/2))/(width/2)
         
         if debug_img:
             self.imshow_bgr(img)
             self.platform_img.publish(bridge.cv2_to_imgmsg(img))
 
-        return platform_center
+        return platform_center_x
     
     
     
@@ -164,6 +183,7 @@ class platformDetector:
 if __name__ == '__main__':
     rospy.init_node('platform_detector', anonymous=True)
     platform = platformDetector()
+    dronecontrol = drone_controller.control()
     #rospy.spin()
     #platform.test_image("platform.png")
-    platform.test_images("../images/platform_pics/run2")
+    platform.test_images("../../images/platform_pics/run2")
