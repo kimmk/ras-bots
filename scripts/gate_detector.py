@@ -14,6 +14,17 @@ from std_msgs.msg import Float64
 
 bridge = CvBridge()
 
+def is_within_bbox(p, bbox):
+    x2 = bbox[0]+bbox[2]
+    y2 = bbox[1]+bbox[3]
+    return p[0] >= bbox[0] and p[1] >= bbox[1] and p[0] <= x2 and p[1] <= y2
+
+def points_within_bbox(cnts, bbox):
+    points = []
+    for cnt in cnts:
+        points.extend([[[p[0][0],p[0][1]]] for p in cnt if is_within_bbox(p[0], bbox)])
+    return np.array(points, dtype=np.int32)
+
 def add_bboxes(a, b):
     # x, y, w, h
     x = min(a[0], b[0])
@@ -39,7 +50,7 @@ class GateDetector:
         img = cv2.imread(filepath)
         if img is not None:
             img = imutils.resize(img, width=600)
-            self.detect_gate(img)
+            self.detect_gate_bbox(img)
 
     def test_images(self, path):
         for file in os.listdir(path):
@@ -51,7 +62,7 @@ class GateDetector:
         except CvBridgeError as e:
             print(e)
         else:
-            gate = self.detect_gate(cv2_img)
+            gate = self.detect_gate_bbox(cv2_img)
             if gate:
                 angle,dist,center = gate
                 self.gate_angle.publish(angle)
@@ -65,6 +76,12 @@ class GateDetector:
     def imshow_grayscale(self, img):    
         plt.imshow(img, cmap='gray', vmin=0, vmax=255)
         plt.show()
+
+    def debug_draw_gate(self, gate, img):
+        angle,dist,center = gate
+        p = (img.shape[0]*1//3,img.shape[1]*2//3)
+        cv2.putText(img, f"angle: {angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.circle(img, center, 4, (255,255,255), -1)
 
     def filter_gates(self, img):
         # Apply HSV filter for green gates
@@ -107,25 +124,32 @@ class GateDetector:
                 box = [c[0] for c in approx] # resolve annoying lists within list
                 box.sort(key=lambda p: p[0]) # sort points by x coordinate
 
+                h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
+                h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
+                gate_angle = h0/h1
+                gate = (gate_angle, -1, gate_center)
+
                 if debug_img is not None:
                     for i, coord in enumerate(box):
                         p = tuple(coord)
                         cv2.putText(debug_img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                         #cv2.circle(img, p, 4, (255,255,255), -1)
-                    cv2.circle(debug_img, gate_center, 4, (255,255,255), -1)
-
-                h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
-                h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
-                gate_angle = h0/h1
-                if debug_img is not None:
-                    p = (debug_img.shape[0]*1//3,debug_img.shape[1]*2//3)
-                    cv2.putText(debug_img, f"angle: {gate_angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                print("ratio: ", gate_angle)
-                return (gate_angle, -1, gate_center)
+                    self.debug_draw_gate(gate, debug_img)
+        
+                return gate
         return None
 
     def find_gate_5gon(self, cnts, debug_img):
-        return None
+        for points in cnts:
+            epsilon = 0.05*cv2.arcLength(points,True)
+            approx = cv2.approxPolyDP(points,epsilon,True)
+            if debug_img is not None:
+                print(approx[0][0])
+                cv2.putText(debug_img, f"{len(approx)}", tuple(approx[0][0]), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                clr = (255,255,255)
+                if len(approx) == 5:
+                    clr = (255,0,255)
+                cv2.drawContours(debug_img,[approx],0,clr,2)
 
     def detect_gate(self, img):
         gate = None
@@ -177,14 +201,41 @@ class GateDetector:
         # Combine close enough bboxes
         combi_bboxes = []
         combi_range = img.shape[0]*0.3
-        for b in bboxes:
-            print(b)
+        #b = add_bboxes(bboxes[0], bboxes[1])
+        #x,y,w,h = b
 
-        b = add_bboxes(bboxes[0], bboxes[1])
-        x,y,w,h = b
+        # Get largest bbox
+        bbox = (-1,-1,-1,-1)
+        for b in bboxes:
+            if b[2]*b[3] > bbox[2]*bbox[3]:
+                bbox = b
+        box_ratio = bbox[2]/bbox[3]
+
+        if bbox[0] != -1 and box_ratio > 0.3 and box_ratio < 3.0:
+            w_half = bbox[2]//2
+            bbox_a = (bbox[0],bbox[1],w_half,bbox[3])
+            bbox_b = (bbox[0]+w_half,bbox[1],w_half,bbox[3])
+
+            points_a = points_within_bbox(im_cnts, bbox_a)
+            points_b = points_within_bbox(im_cnts, bbox_b)
+
+            bbox_a = cv2.boundingRect(points_a)
+            bbox_b = cv2.boundingRect(points_b)
+
+            # angle,dist,center
+            angle = bbox_a[3]/bbox_b[3]
+            center = (bbox[0]+bbox[2]//2,bbox[1]+bbox[3]//2)
+            dist = -1 # todo
+            gate = (angle,dist,center)
+
+            if debug_img is not None:
+                x,y,w,h = bbox_a
+                cv2.rectangle(debug_img, (x,y), (x+w,y+h), (255,0,0), 2)
+                x,y,w,h = bbox_b
+                cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
+                self.debug_draw_gate(gate, img)
 
         if debug_img is not None:
-            cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
             cv2.drawContours(debug_img, im_cnts, -1, (0, 255, 0), 2)
             self.imshow_bgr(debug_img)
 
