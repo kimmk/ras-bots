@@ -91,4 +91,5 @@ def handle_exit(signum, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handle_exit)
     rospy.init_node('gate_detector', anonymous=True)
+    StateMachine = ControlState()
     rospy.spin()
