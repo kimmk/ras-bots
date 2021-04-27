@@ -125,9 +125,11 @@ class GateDetector:
         
         angle, dist, (x, y) = gate_data
         pose = Pose()
+        
+        #coord shift beacuse x-y is on the vertical image plane
         pose.position.x = x
         pose.position.y = y
-        pose.position.z = dist
+        pose.position.z = -dist
         pose.orientation.w= angle
         pose.orientation.x=0
         pose.orientation.y=0
