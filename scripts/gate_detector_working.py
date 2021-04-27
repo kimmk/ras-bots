@@ -115,16 +115,15 @@ class GateDetector:
             print("kerneldim " + str(self.kerneldim))
             self.largest_element = 0
             gate_data = self.detect_gate(cv2_img.copy())
+        
+        
+        if gate_data is not None:
+            pose = self.createposition(gate_data)
+            self.gate_pose.publish(pose)
             
-        ##vals = [x,y,dist,angle]
-        #vals = self.detect_gate_bbox(cv2_img)
-        #if vals is not None:
-        #    pose = self.createposition(vals)
-        #    self.gate_pose.publish(pose)
-            
-    def createposition(self,vals):
-        if debug_mode: print(vals)
-        angle, dist, (x, y) = vals
+    def createposition(self,gate_data):
+        
+        angle, dist, (x, y) = gate_data
         pose = Pose()
         pose.position.x = x
         pose.position.y = y
