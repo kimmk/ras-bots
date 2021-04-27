@@ -202,14 +202,14 @@ class GateDetector:
         # Select largest contour by it's bounding box
         gate_points = None
         gate_center = None
+        gate_box = None
         biggest_box = 0
         box_ratio = 0
         for points in cnts:
-            x,y,w,h = cv2.boundingRect(points)
+            gate_box = cv2.boundingRect(points)
+            x,y,w,h = gate_box
             box_sz = w*h
             
-            if debug_img is not None:
-                cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
             if box_sz > biggest_box and box_sz > 30000:
                 biggest_box = box_sz
                 box_ratio = (w+0.0)/h
@@ -224,52 +224,17 @@ class GateDetector:
         if gate_points is not None and box_ratio > 0.3 and box_ratio < 3.0:
             epsilon = 0.05*cv2.arcLength(gate_points,closed = True)
             approx = cv2.approxPolyDP(gate_points,epsilon,closed = True)
-            if debug_img is not None:
-                #print("draw approx, blue")
-                pass
-                #self.imshow_bgr(debug_img)
             if len(approx) == 4:
-                bbox = cv2.boundingRect(gate_points)
                 if debug_img is not None:
-                    cv2.drawContours(debug_img,[approx],0,(255,0,0),2)
-                
-                
-                
-                w_half = bbox[2]//2
-                bbox_a = (bbox[0],bbox[1],w_half,bbox[3])
-                bbox_b = (bbox[0]+w_half,bbox[1],w_half,bbox[3])
-
-                points_a = points_within_bbox(cnts, bbox_a)
-                points_b = points_within_bbox(cnts, bbox_b)
-                if devel_mode:
-                    print("points_a")
-                    print(points_a)
-                bbox_a = cv2.boundingRect(points_a)
-                bbox_b = cv2.boundingRect(points_b)
-                
-                h1 = bbox_a[3]
-                h2 = bbox_b[3]
-                
-                
-                gate = [bbox, h1,h2]
-                
-                """
+                    x,y,w,h = cv2.boundingRect(approx)
+                    cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
                 box = [c[0] for c in approx] # resolve annoying lists within list
                 box.sort(key=lambda p: p[0]) # sort points by x coordinate
-
+                # h0 = box left edge height
+                # h1 = box right edge height
                 h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
-                gate_angle = h0/h1
-                gate = (gate_angle, -1, gate_center)
-
-                if debug_img is not None:
-                    for i, coord in enumerate(box):
-                        p = tuple(coord)
-                        #cv2.putText(debug_img, f"{i}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                        #cv2.circle(img, p, 4, (255,255,255), -1)
-                    self.debug_draw_gate(gate, debug_img)
-                #"""
-                return gate
+                return (gate_box, h0, h1)
         return None
 
     def find_gate_6gon(self, cnts, debug_img):
