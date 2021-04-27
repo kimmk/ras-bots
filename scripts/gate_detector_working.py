@@ -90,7 +90,7 @@ class GateDetector:
 
     def camera_callback(self, img):
         try:
-            cv2_img = bridge.imgmsg_to_cv2(msg, "bgr8")
+            cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
         except CvBridgeError as e:
             print(e)
         else:
