@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import rospy
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Pose.
-from scripts.img_recon import GateDetector
-from scripts.controls import *
+from geometry_msgs.msg import Pose
+from img_recon import GateDetector
+from controls import *
 
 decisionNone = 0
 decisionCorrection = 1
@@ -72,7 +72,7 @@ class ControlState:
                 dWeight = 2
         self.decisionTotals += 1
         self.decisionTally[decision] += dWeight
-        if self.decisionTotals < magicNumber
+        if self.decisionTotals < magicNumber:
             return
 
         decision = np.argmax(self.decisionTally)
@@ -80,12 +80,14 @@ class ControlState:
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
         if decision == decisionNone:
+            pass
             ##this is the part where we pretend that we know what we are doing
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
         else: 
             self.go_trough_gate()
-
+def handle_exit(signum, frame):
+    sys.exit(0)
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handle_exit)
     rospy.init_node('gate_detector', anonymous=True)
