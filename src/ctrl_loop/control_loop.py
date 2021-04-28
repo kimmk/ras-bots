@@ -34,13 +34,17 @@ dateTimeFormat = "%d-%m-%Y_%H:%M:%S"
 
 class ControlState:
     def __init__(self):
+        logging.config.fileConfig('logging.conf')
+        mylogger = logging.getLogger('decisionControl')
+        logging.info("----------------------")
+        logging.info("Decision Control START")
+        
         self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.gateDetector = GateDetector()
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
         self.target_dist = 0.8
-        print("more")
 
         if devel_mode:
             logging.info("DEVEL MODE")
@@ -95,7 +99,11 @@ class ControlState:
         return 1
         
     def camera_callback(self, img):
-        cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
+        logging.info("Camera Callback")
+        if devel_mode:
+            cv2_img = img
+        else:
+            cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
         gate = self.gateDetector.image_processing(cv2_img)
         decision = decisionNone
         dWeight = 1
@@ -116,20 +124,20 @@ class ControlState:
                 decision = decisionCorrection
                 dWeight = 2
         self.decisionTotals += 1
+        logging.info("Total Decisions: "+str(self.decisionTotals))
         self.decisionTally[decision] += dWeight
         if self.decisionTotals < magicNumber:
             return
 
         decision = np.argmax(self.decisionTally)
-        print("decisioc: " + str(decision))
+        logging.info("DecisionTally: "+np.array2string(self.decisionTally))
+        logging.info("Decision: "+str(decision))
+        if self.lastGate != None:
+            logging.info(self.lastGate)
+
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
-
-        logging.info("DecisionTally: ", self.decisionTally)
-        logging.info("Decision: ",decision)
-        if self.lastGate != None:
-            logging.info(self.lastGate)
 
         if decision == decisionNone:
             pass
@@ -145,11 +153,7 @@ def handle_exit(signum, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handle_exit)
-    #configuring logging
-    logging.config.fileConfig('logging.conf')
-    mylogger = logging.getLogger('decisionControl')
-    logging.info("----------------------")
-    logging.info("Decision Control START")
     rospy.init_node('gate_detector', anonymous=True)
     StateMachine = ControlState()
     rospy.spin()
+    
