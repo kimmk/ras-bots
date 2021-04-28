@@ -11,21 +11,27 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose
 from img_recon import GateDetector
-from controls import *
+from geometry_msgs.msg import Twist
+import controls
+import time
 
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
 magicNumber = 10
+bridge = CvBridge()
 
 class ControlState:
-    def __init__():
+    def __init__(self):
         rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera 
         self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.gateDetector = GateDetector()
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
+        self.target_dist = 0.8
+        print("more")
+
 
     def move_around_gate(self, alpha, gate_x, gate_z, gate_dist):
         #see what input is like, the convert alpha to deg, with 0 = center, +90 = left, -90 = right
@@ -34,7 +40,7 @@ class ControlState:
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
         sy += alpha  #at 90 deg, speed=max=pi/2
-        saz += alpha
+        saz += alpha/10
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
@@ -51,7 +57,8 @@ class ControlState:
         return 1
         
     def camera_callback(self, img):
-        gate = self.gateDetector.image_processing(img)
+        cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
+        gate = self.gateDetector.image_processing(cv2_img)
         decision = decisionNone
         dWeight = 1
 
@@ -76,6 +83,7 @@ class ControlState:
             return
 
         decision = np.argmax(self.decisionTally)
+        print("decisioc: " + str(decision))
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate

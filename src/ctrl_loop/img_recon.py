@@ -18,23 +18,9 @@ bridge = CvBridge()
 #devel mode = 1: picking single images from file to process
 #devel mode = 0: picking images from subscriber image stream
 devel_mode = 1
-debug_mode = 1
+debug_mode = 0
 
-def imshow_bgr(self, img):
-    cv2.imshow("frame", img)
-    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    #plt.imshow(img)
-    #plt.show()
 
-def imshow_grayscale(self, img):    
-    plt.imshow(img, cmap='gray', vmin=0, vmax=255)
-    plt.show()
-
-def debug_draw_gate(self, gate, img):
-    angle,dist,center = gate
-    p = (img.shape[0]*1//3,img.shape[1]*2//3)
-    #cv2.putText(img, f"angle: {angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-    cv2.circle(img, center, 4, (255,255,255), -1)
 
 ################################### Defs for BBOXES
 
@@ -129,8 +115,24 @@ class GateDetector:
         self.largest_element = 0
         # MOVE TO STATE MACHINE
         
-        rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
+        #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
+    
+    def imshow_bgr(self, img):
+        cv2.imshow("frame", img)
+        #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #plt.imshow(img)
+        #plt.show()
 
+    def imshow_grayscale(self, img):    
+        plt.imshow(img, cmap='gray', vmin=0, vmax=255)
+        plt.show()
+
+    def debug_draw_gate(self, gate, img):
+        angle,dist,center = gate
+        p = (img.shape[0]*1//3,img.shape[1]*2//3)
+        #cv2.putText(img, f"angle: {angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.circle(img, center, 4, (255,255,255), -1)
+    
     ## Main Function - Public
     def image_processing(self, cv2_img):
         self.kerneldim = 19
@@ -144,8 +146,8 @@ class GateDetector:
             else:
                 self.kerneldim += 2
             attempts += 1
-            print("largest shape " + str(self.largest_element))
-            print("kerneldim " + str(self.kerneldim))
+            #print("largest shape " + str(self.largest_element))
+            #print("kerneldim " + str(self.kerneldim))
             self.largest_element = 0
             gate_data = self.detect_gate(cv2_img.copy())
         return gate_data
