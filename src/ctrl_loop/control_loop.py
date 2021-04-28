@@ -95,9 +95,18 @@ class ControlState:
         else: 
             self.go_trough_gate()
 def handle_exit(signum, frame):
+    cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch = True)
+    cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
+    rospy.sleep(0.5)
+    cmd_land.publish(Empty())
+    cmd_pub.publish(controls.hold())
+    
+    
+    print("set to neutral + landing")
+    rospy.sleep(1)
     sys.exit(0)
 if __name__ == '__main__':
-    signal.signal(signal.SIGINT, handle_exit)
     rospy.init_node('gate_detector', anonymous=True)
+    signal.signal(signal.SIGINT, handle_exit)
     StateMachine = ControlState()
     rospy.spin()
