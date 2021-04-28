@@ -20,7 +20,7 @@ bridge = CvBridge()
 #devel mode = 2: write cv2 img and log in file
 #devel mode = 0: picking images from subscriber image stream
 devel_mode = 1
-debug_mode = 1
+debug_mode = 0
 dateTimeFormat = "%d-%m-%Y_%H:%M:%S"
 
 # Not deleted: required when debugging without Drone
@@ -76,32 +76,6 @@ def createposition(self,gate_data):
 
 ##################################### Data Input
 
-def test_video(self, filepath):
-        cap = cv2.VideoCapture(filepath)
-        while(cap.isOpened()):
-            ret, frame = cap.read()
-            self.image_processing(frame)
-            #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            #cv2.imshow('frame',gray)
-            #wait for n millisec or a keypress
-            if cv2.waitKey(100) & 0xFF == ord('q'):
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-        
-def test_image(self, filepath):
-    cv2_img = cv2.imread(filepath)
-    if cv2_img is not None:
-        self.image_processing(cv2_img)
-        
-def test_images(self, path):
-    for i in range(0,100):
-        file = "/picture" + str(i) + ".png"
-        #print(file)
-        self.test_image(path+file)
-    #for file in os.listdir(path):
-    #    self.test_image(path+"/"+file)
 
 def camera_callback(self, img):
     try:
@@ -121,7 +95,7 @@ class GateDetector:
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
         self.kerneldim = 19
         self.largest_element = 0
-        rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
+        #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
     ## Main Function - Public
     def image_processing(self, cv2_img):
@@ -136,8 +110,8 @@ class GateDetector:
             else:
                 self.kerneldim += 2
             attempts += 1
-            print("largest shape " + str(self.largest_element))
-            print("kerneldim " + str(self.kerneldim))
+            # print("largest shape " + str(self.largest_element))
+            # print("kerneldim " + str(self.kerneldim))
             self.largest_element = 0
             gate_data = self.detect_gate(cv2_img.copy())
 
@@ -173,9 +147,9 @@ class GateDetector:
         gate_rect = self.find_gate_4gon(im_cnts, debug_img)
         gate_parts = self.find_gate_6gon(im_cnts, debug_img)
         if debug_mode:
-            print("Gate data: rect and corners, bbox, h1,h2")
-            print(gate_rect)
-            print(gate_parts)
+            logging.debug("Gate data: rect and corners, bbox, h1,h2")
+            logging.debug(gate_rect)
+            logging.debug(gate_parts)
         
         #picking the bigger(closer) gate
         sz_gate_rect = 0
@@ -229,7 +203,7 @@ class GateDetector:
             #self.imshow_bgr(blurred)
             #print("H")
             #self.imshow_bgr(dilateH)
-            print("V")
+            logging.debug("V")
             #self.imshow_bgr(dilateV)
             #print("thresh")
             #self.imshow_bgr(thresh)
@@ -301,13 +275,13 @@ class GateDetector:
         #sorting in descending size
         candidates = sorted(candidates, key = lambda x: x[1], reverse = True)
         if debug_mode:
-            print("corners:candidates sizes")
+            logging.debug("corners:candidates sizes")
             cand_sizes = [x[1] for x in candidates]
-            print(cand_sizes)
+            logging.debug(cand_sizes)
         cand_len = len(candidates)
         corners = []
         if debug_mode:
-            print("corners:cand_len: " + str(cand_len))
+            logging.debug("corners:cand_len: " + str(cand_len))
         if cand_len >=3:
             corners = candidates[0][0]
             corner_bboxes = [cv2.boundingRect(corners)]
@@ -319,7 +293,8 @@ class GateDetector:
                     corner_bboxes.append(cv2.boundingRect(cand))
                     corners = np.append(corners, cand, 0)
             cornercount = len(corner_bboxes)
-            if debug_mode: print("corners:cornercount: " + str(cornercount))
+            if debug_mode: 
+                logging.debug("corners:cornercount: " + str(cornercount))
             #print(corners)
             #print(len(corner_bboxes))
             #flat_corners = [item for sublist in corners for item in sublist]
@@ -401,6 +376,7 @@ class GateDetector:
         #smaller bbox corresponds to center height, cali=px*dist
         dist = cali/(min(h1,h2))
         gate = (angle,dist,center)
-        print("gate data: angle, dist, (x,y %)")
-        print(gate)
+        if debug_mode:
+            logging.debug("gate data: angle, dist, (x,y %)")
+            logging.debug(gate)
         return(gate)
