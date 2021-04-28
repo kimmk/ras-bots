@@ -19,7 +19,7 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-magicNumber = 10
+magicNumber = 5
 bridge = CvBridge()
 
 class ControlState:
@@ -30,7 +30,7 @@ class ControlState:
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
-        self.target_dist = 1.0
+        self.target_dist = 0.7
         
 
 
@@ -42,11 +42,11 @@ class ControlState:
         #set speeds to 0
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
-        #sy += alpha  
-        #saz += alpha
+        sy += alpha  
+        saz += alpha
         saz = 0
         sy += gate_x
-        sz += -gate_z
+        sz += -gate_z-0.5
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
         
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
@@ -75,9 +75,9 @@ class ControlState:
             pass
         
         else:
-            angle,dist,(x,y) = gate
-            self.move_around_gate(angle,dist,x,y)
-        """
+            #angle,dist,(x,y) = gate
+            #self.move_around_gate(angle,dist,x,y)
+        
             self.lastGate = gate
             angle, dist, (x, y) = gate
             ######## Decider

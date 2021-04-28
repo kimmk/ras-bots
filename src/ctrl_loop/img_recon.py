@@ -177,7 +177,8 @@ class GateDetector:
                 gate_data = self.detect_gate_angle(img,gate_parts[0],gate_parts[1],gate_parts[2])
         
         if debug_img is not None:
-            self.imshow_bgr(debug_img)
+            #self.imshow_bgr(debug_img)
+            
             self.gate_img.publish(bridge.cv2_to_imgmsg(debug_img))
         return gate_data
 
