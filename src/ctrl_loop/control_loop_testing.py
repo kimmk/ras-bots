@@ -12,6 +12,7 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose
 from img_recon import GateDetector
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Empty
 import controls
 import time
 
@@ -29,24 +30,32 @@ class ControlState:
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
-        self.target_dist = 0.8
-        print("more")
+        self.target_dist = 1.0
+        
 
 
-    def move_around_gate(self, alpha, gate_x, gate_z, gate_dist):
+    def move_around_gate(self, alpha, gate_dist, gate_x, gate_z):
+        #print("move")
+        #print(alpha,gate_x,gate_z,gate_dist)
         #see what input is like, the convert alpha to deg, with 0 = center, +90 = left, -90 = right
         #convert x and z to % of image
         #set speeds to 0
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
-        sy += alpha  #at 90 deg, speed=max=pi/2
-        saz += alpha/10
+        #sy += alpha  
+        #saz += alpha
+        saz = 0
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
+        
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
-        time.sleep(0.5)
-        self.cmd_pub.publish(controls.hold())
+        #self.cmd_pub.publish(controls.control(x = 1))
+        #time.sleep(0.5)
+        #self.cmd_pub.publish(controls.hold())
+        
+        
+        #y=+1 == forward with ok speed
 
     def go_trough_gate(self):
         sx = 1
@@ -61,10 +70,14 @@ class ControlState:
         gate = self.gateDetector.image_processing(cv2_img)
         decision = decisionNone
         dWeight = 1
-
+        
         if gate is None:
             pass
+        
         else:
+            angle,dist,(x,y) = gate
+            self.move_around_gate(angle,dist,x,y)
+        """
             self.lastGate = gate
             angle, dist, (x, y) = gate
             ######## Decider
@@ -83,7 +96,7 @@ class ControlState:
             return
 
         decision = np.argmax(self.decisionTally)
-        print("decisioc: " + str(decision))
+        print("decision: " + str(decision))
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
@@ -94,6 +107,7 @@ class ControlState:
             self.move_around_gate(angle,dist,x,y)
         else: 
             self.go_trough_gate()
+        #"""
 def handle_exit(signum, frame):
     cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch = True)
     cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
@@ -106,6 +120,7 @@ def handle_exit(signum, frame):
     rospy.sleep(1)
     sys.exit(0)
 if __name__ == '__main__':
+    
     rospy.init_node('gate_detector', anonymous=True)
     signal.signal(signal.SIGINT, handle_exit)
     StateMachine = ControlState()
