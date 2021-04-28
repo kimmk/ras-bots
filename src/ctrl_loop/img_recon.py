@@ -97,6 +97,16 @@ class GateDetector:
         self.largest_element = 0
         #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
+    def imshow_grayscale(self, img):    
+        plt.imshow(img, cmap='gray', vmin=0, vmax=255)
+        plt.show()
+
+    def debug_draw_gate(self, gate, img):
+        angle,dist,center = gate
+        p = (img.shape[0]*1//3,img.shape[1]*2//3)
+        #cv2.putText(img, f"angle: {angle:.2f}", p, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.circle(img, center, 4, (255,255,255), -1)
+    
     ## Main Function - Public
     def image_processing(self, cv2_img):
         self.kerneldim = 19

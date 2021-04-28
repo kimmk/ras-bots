@@ -11,6 +11,9 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose
 from img_recon import GateDetector
+from geometry_msgs.msg import Twist
+import controls
+import time
 from controls import *
 import logging
 import logging.config
@@ -20,6 +23,7 @@ decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
 magicNumber = 10
+bridge = CvBridge()
 
 ################################### DEVEL VARS & DEFS
 #devel mode = 1: picking single images from file to process
@@ -35,6 +39,8 @@ class ControlState:
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
+        self.target_dist = 0.8
+        print("more")
 
         if devel_mode:
             logging.info("DEVEL MODE")
@@ -71,7 +77,7 @@ class ControlState:
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
         sy += alpha  #at 90 deg, speed=max=pi/2
-        saz += alpha
+        saz += alpha/10
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
@@ -89,7 +95,8 @@ class ControlState:
         return 1
         
     def camera_callback(self, img):
-        gate = self.gateDetector.image_processing(img)
+        cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
+        gate = self.gateDetector.image_processing(cv2_img)
         decision = decisionNone
         dWeight = 1
 
@@ -114,6 +121,7 @@ class ControlState:
             return
 
         decision = np.argmax(self.decisionTally)
+        print("decisioc: " + str(decision))
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
