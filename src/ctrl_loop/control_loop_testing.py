@@ -19,8 +19,9 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-magicNumber = 5
+magicNumber = 4
 bridge = CvBridge()
+heightcorrect = 0.3
 
 class ControlState:
     def __init__(self):
@@ -42,15 +43,17 @@ class ControlState:
         #set speeds to 0
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
-        sy += alpha  
-        saz += alpha
+        #angle ranges from -0.1 to + 0.1
+        #sy += alpha *10 
+        saz += alpha *50.0
+        print(saz)
         saz = 0
         sy += gate_x
-        sz += -gate_z-0.5
+        sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
-        
+        #if rotating, do one first then other
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
-        #self.cmd_pub.publish(controls.control(x = 1))
+        #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
         #self.cmd_pub.publish(controls.hold())
         
@@ -68,6 +71,7 @@ class ControlState:
     def camera_callback(self, img):
         cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
         gate = self.gateDetector.image_processing(cv2_img)
+        
         decision = decisionNone
         dWeight = 1
         
@@ -77,11 +81,14 @@ class ControlState:
         else:
             #angle,dist,(x,y) = gate
             #self.move_around_gate(angle,dist,x,y)
-        
+            #angle ranges from -0.1 to + 0.1
             self.lastGate = gate
             angle, dist, (x, y) = gate
+            
+            y = y + heightcorrect
+            #print(angle)
             ######## Decider
-            if abs(x)<0.05 and abs(y)<0.05 and abs(angle)<0.1 and abs(dist-self.target_dist)<0.1:
+            if abs(x)<0.05 and abs(y)<0.05 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.1:
                 # foo = self.go_trough_gate()
                 # print("gogogo")
                 decision = decisionGo
@@ -96,10 +103,11 @@ class ControlState:
             return
 
         decision = np.argmax(self.decisionTally)
-        print("decision: " + str(decision))
+        #print("decision: " + str(decision))
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
+        y=y+heightcorrect
         if decision == decisionNone:
             pass
             ##this is the part where we pretend that we know what we are doing
