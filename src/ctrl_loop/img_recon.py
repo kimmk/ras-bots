@@ -198,7 +198,7 @@ class GateDetector:
                 gate_data = self.detect_gate_angle(img,gate_parts[0],gate_parts[1],gate_parts[2])
         
         if debug_img is not None:
-            #self.imshow_bgr(debug_img)
+            self.imshow_bgr(debug_img)
             self.gate_img.publish(bridge.cv2_to_imgmsg(debug_img))
         return gate_data
 
@@ -231,11 +231,11 @@ class GateDetector:
         if devel_mode and False:
             #self.imshow_bgr(gray)
             #print("blurred")
-            #self.imshow_bgr(blurred)
+            self.imshow_bgr(blurred)
             #print("H")
             #self.imshow_bgr(dilateH)
             print("V")
-            #self.imshow_bgr(dilateV)
+            self.imshow_bgr(dilateV)
             #print("thresh")
             #self.imshow_bgr(thresh)
             
@@ -393,9 +393,9 @@ class GateDetector:
                 #-> alpha = cali/0.35*(1/h1-1/h2)
         cali = 250.0
         gate_w = 0.7
-        angle = cali/(gate_w/2.0)*(1.0/h1-1.0/h2)
+        #angle = cali/(gate_w/2.0)*(1.0/h1-1.0/h2)
         #angle = 1/bbox_a[3]-1/bbox_b[3]
-            
+        angle = (h1-h2)/(h1+h2)        
             
         center = (bbox[0]+bbox[2]//2.0,bbox[1]+bbox[3]//2.0)
         image_width_half = img.shape[1]/2.0
