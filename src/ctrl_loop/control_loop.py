@@ -86,8 +86,10 @@ class ControlState:
             self.move_around_gate(angle,dist,x,y)
         else: 
             self.go_trough_gate()
+
 def handle_exit(signum, frame):
     sys.exit(0)
+    
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handle_exit)
     rospy.init_node('gate_detector', anonymous=True)
