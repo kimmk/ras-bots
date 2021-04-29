@@ -1,18 +1,25 @@
 source drone_racing_ws/devel/setup.bash
 roslaunch tello_driver tello_node.launch tello_ip:="192.168.10.1"
 
-
 rosrun image_transport republish compressed in:=/tello/image_raw out:=/image _image_transport:=h264
 
 
-source drone_racing_ws/devel/setup.bash
-rostopic echo /tello/status
-
-
-source drone_racing_ws/devel/setup.bash
-rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/tello/cmd_vel
 
 
 rostopic pub /tello/takeoff std_msgs/Empty
 rostopic pub /tello/land std_msgs/Empty
 
+
+rviz
+
+rostopic echo /tello/cmd_vel
+
+
+
+#optional
+source drone_racing_ws/devel/setup.bash
+rostopic echo /tello/status
+
+
+#manual
+rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/tello/cmd_vel
