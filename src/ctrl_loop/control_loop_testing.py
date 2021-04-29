@@ -19,9 +19,10 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-votecount = 7
+votecount = 2
 bridge = CvBridge()
 heightcorrect = 0
+xcorrect = 0.2
 
 class ControlState:
     def __init__(self):
@@ -31,8 +32,9 @@ class ControlState:
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
-        self.target_dist = 0.8
+        self.target_dist = 0.7
         self.metronome = 0
+        self.justWentTrough = 0 
         
 
 
@@ -67,10 +69,22 @@ class ControlState:
         saz += -alpha *10.0
         print(alpha, gate_dist, gate_x, gate_z)
         
+        #if abs(gate_x < 0.1):
+        #    gate_x = np.sign(gate_x)*0.1
+        
+        #if abs(gate_z < 0.1):
+        #    gate_z = np.sign(gate_z)*0.1
+        
+        control_multiple = 1
+        
+        gate_x = gate_x*control_multiple
+        
+        gate_z = gate_z*control_multiple
+        
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
-        
+        sx = sx*control_multiple
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
         #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
@@ -80,12 +94,15 @@ class ControlState:
         
 
     def go_trough_gate(self):
-        sx = 1
+        sx = 1.7
         sz = 0.6
+        stop = 1
+        self.cmd_pub.publish(controls.hold())
+        time.sleep(0.5)
         self.cmd_pub.publish(controls.control(y=sx, z = -sz))
-        time.sleep(1.5)
-        self.cmd_pub.publish(controls.control(y=sx, z = sz))
-        time.sleep(1.5)
+        time.sleep(2.3)
+        self.cmd_pub.publish(controls.control(y=-stop))
+        time.sleep(1)
         self.cmd_pub.publish(controls.hold())
         time.sleep(1.5)
         for i in range(10):
@@ -94,8 +111,8 @@ class ControlState:
         return 1
         
     def search(self):
-        self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.6 ))
-        time.sleep(0.5)
+        self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.5 ))
+        time.sleep(0.2)
         
         self.metronome += 1
         if self.metronome > 10:
@@ -120,9 +137,10 @@ class ControlState:
             angle, dist, (x, y) = gate
             
             y = y + heightcorrect
+            x = x+xcorrect
             #print(angle)
             ######## Decider
-            if abs(x)<0.04 and abs(y)<0.03 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.1:
+            if abs(x)<0.1 and abs(y)<0.1 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.2:
                 # foo = self.go_trough_gate()
                 # print("gogogo")
                 decision = decisionGo
@@ -142,14 +160,19 @@ class ControlState:
         self.decisionTotals = 0
         angle, dist, (x, y) = self.lastGate
         y=y+heightcorrect
+        x = x+xcorrect
         if decision == decisionNone:
             
             self.search()
+            self.justWentTrough = 0
             ##this is the part where we pretend that we know what we are doing
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
-        else: 
-            foo = self.go_trough_gate()
+            self.justWentTrough = 0
+        else:
+            if not self.justWentTrough:
+                self.justWentTrough = 1
+                foo = self.go_trough_gate()
         #"""
 def handle_exit(signum, frame):
 #def handle_exit():

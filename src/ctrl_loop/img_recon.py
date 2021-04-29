@@ -93,7 +93,7 @@ class GateDetector:
     def __init__(self):
         self.gate_img = rospy.Publisher("gate_img", Image, queue_size=10) # Debug image of gate vision
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
-        self.kerneldim = 19
+        self.kerneldim = 15
         self.largest_element = 0
         #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
@@ -109,7 +109,7 @@ class GateDetector:
     
     ## Main Function - Public
     def image_processing(self, cv2_img):
-        self.kerneldim = 13
+        self.kerneldim = 15
         cv2_img = imutils.resize(cv2_img, width=600)
         gate_data = self.detect_gate(cv2_img.copy())
         attempts = 0
@@ -178,8 +178,8 @@ class GateDetector:
         
         if debug_img is not None:
             #self.imshow_bgr(debug_img)
-            pass
-            #self.gate_img.publish(bridge.cv2_to_imgmsg(debug_img))
+            #pass
+            self.gate_img.publish(bridge.cv2_to_imgmsg(debug_img))
         return gate_data
 
     ## Image Manipulation
@@ -207,7 +207,7 @@ class GateDetector:
         erodeV=cv2.erode(dilateH, kernelV, iterations=1)
         dilateV=cv2.dilate(erodeV, kernelV, iterations=1)
         thresh = cv2.threshold(dilateV, 10, 255, cv2.THRESH_BINARY)[1]
-        self.gate_img.publish(bridge.cv2_to_imgmsg(dilateV))
+        #self.gate_img.publish(bridge.cv2_to_imgmsg(dilateV))
         if devel_mode and False:
             #self.imshow_bgr(gray)
             #print("blurred")
