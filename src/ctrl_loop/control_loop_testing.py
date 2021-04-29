@@ -36,6 +36,24 @@ class ControlState:
 
 
     def move_around_gate(self, alpha, gate_dist, gate_x, gate_z):
+        #         y+
+        #         ^
+        #    x- <- ->  x+
+        #         v
+        #         y-
+        #   . = z+
+        #   + = z-
+        #   clockwise = az-      ?
+        #   cntrclockwise = az+  ?
+        #
+        
+        
+        #   looking from gate: if drone is left:  alpha < 0
+        #                                  right: alpha > 0
+        #looking from drone: if gate is left:  x < 0
+        #                               right: x > 0
+        #                               high:  z < 0
+        #                               low:   z > 0
         #print("move")
         #print(alpha,gate_x,gate_z,gate_dist)
         #see what input is like, the convert alpha to deg, with 0 = center, +90 = left, -90 = right
@@ -44,14 +62,14 @@ class ControlState:
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
         #angle ranges from -0.1 to + 0.1
-        #sy += alpha *10 
-        saz += alpha *50.0
-        print(saz)
-        saz = 0
+        sy += alpha *10.0 
+        saz += alpha *10.0
+        print(alpha, gate_dist, gate_x, gate_z)
+        
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
-        #if rotating, do one first then other
+        
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
         #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
@@ -116,20 +134,22 @@ class ControlState:
         else: 
             self.go_trough_gate()
         #"""
-def handle_exit(signum, frame):
+#def handle_exit(signum, frame):
+def handle_exit():
+    
     cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch = True)
     cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
     rospy.sleep(0.5)
+    print("set to neutral + landing")
     cmd_land.publish(Empty())
     cmd_pub.publish(controls.hold())
-    
-    
-    print("set to neutral + landing")
-    rospy.sleep(1)
-    sys.exit(0)
+    #sys.exit(0)
 if __name__ == '__main__':
     
     rospy.init_node('gate_detector', anonymous=True)
-    signal.signal(signal.SIGINT, handle_exit)
+    #signal.signal(signal.SIGINT, handle_exit)
     StateMachine = ControlState()
+    rospy.on_shutdown(handle_exit)
+    
     rospy.spin()
+    
