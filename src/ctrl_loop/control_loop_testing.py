@@ -81,12 +81,13 @@ class ControlState:
 
     def go_trough_gate(self):
         sx = 1
-        self.cmd_pub.publish(controls.control(y=sx, z = -0.5))
-        time.sleep(1)
-        self.cmd_pub.publish(controls.control(y=sx, z = 0.5))
-        time.sleep(1)
+        sz = 0.6
+        self.cmd_pub.publish(controls.control(y=sx, z = -sz))
+        time.sleep(1.5)
+        self.cmd_pub.publish(controls.control(y=sx, z = sz))
+        time.sleep(1.5)
         self.cmd_pub.publish(controls.hold())
-        time.sleep(0.5)
+        time.sleep(1.5)
         for i in range(10):
             print("GO")
         
@@ -148,7 +149,7 @@ class ControlState:
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
         else: 
-            self.go_trough_gate()
+            foo = self.go_trough_gate()
         #"""
 def handle_exit(signum, frame):
 #def handle_exit():
