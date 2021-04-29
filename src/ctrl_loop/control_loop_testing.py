@@ -19,9 +19,9 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-magicNumber = 4
+votecount = 7
 bridge = CvBridge()
-heightcorrect = 0.3
+heightcorrect = 0
 
 class ControlState:
     def __init__(self):
@@ -31,7 +31,8 @@ class ControlState:
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
-        self.target_dist = 0.7
+        self.target_dist = 0.8
+        self.metronome = 0
         
 
 
@@ -43,8 +44,8 @@ class ControlState:
         #         y-
         #   . = z+
         #   + = z-
-        #   clockwise = az-      ?
-        #   cntrclockwise = az+  ?
+        #   clockwise = az+      ?
+        #   cntrclockwise = az-  ?
         #
         
         
@@ -63,7 +64,7 @@ class ControlState:
         #TODO check signs for all
         #angle ranges from -0.1 to + 0.1
         sy += alpha *10.0 
-        saz += alpha *10.0
+        saz += -alpha *10.0
         print(alpha, gate_dist, gate_x, gate_z)
         
         sy += gate_x
@@ -76,16 +77,30 @@ class ControlState:
         #self.cmd_pub.publish(controls.hold())
         
         
-        #y=+1 == forward with ok speed
+        
 
     def go_trough_gate(self):
         sx = 1
-        self.cmd_pub.publish(controls.control(y=sx))
-        time.sleep(2)
+        self.cmd_pub.publish(controls.control(y=sx, z = -0.5))
+        time.sleep(1)
+        self.cmd_pub.publish(controls.control(y=sx, z = 0.5))
+        time.sleep(1)
         self.cmd_pub.publish(controls.hold())
         time.sleep(0.5)
+        for i in range(10):
+            print("GO")
+        
         return 1
         
+    def search(self):
+        self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.6 ))
+        time.sleep(0.5)
+        
+        self.metronome += 1
+        if self.metronome > 10:
+            self.metronome = -15
+    
+    
     def camera_callback(self, img):
         cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")
         gate = self.gateDetector.image_processing(cv2_img)
@@ -106,7 +121,7 @@ class ControlState:
             y = y + heightcorrect
             #print(angle)
             ######## Decider
-            if abs(x)<0.05 and abs(y)<0.05 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.1:
+            if abs(x)<0.04 and abs(y)<0.03 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.1:
                 # foo = self.go_trough_gate()
                 # print("gogogo")
                 decision = decisionGo
@@ -117,7 +132,7 @@ class ControlState:
                 dWeight = 2
         self.decisionTotals += 1
         self.decisionTally[decision] += dWeight
-        if self.decisionTotals < magicNumber:
+        if self.decisionTotals < votecount:
             return
 
         decision = np.argmax(self.decisionTally)
@@ -127,15 +142,16 @@ class ControlState:
         angle, dist, (x, y) = self.lastGate
         y=y+heightcorrect
         if decision == decisionNone:
-            pass
+            
+            self.search()
             ##this is the part where we pretend that we know what we are doing
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
         else: 
             self.go_trough_gate()
         #"""
-#def handle_exit(signum, frame):
-def handle_exit():
+def handle_exit(signum, frame):
+#def handle_exit():
     
     cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch = True)
     cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
@@ -143,13 +159,13 @@ def handle_exit():
     print("set to neutral + landing")
     cmd_land.publish(Empty())
     cmd_pub.publish(controls.hold())
-    #sys.exit(0)
+    sys.exit(0)
 if __name__ == '__main__':
     
     rospy.init_node('gate_detector', anonymous=True)
-    #signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGINT, handle_exit)
     StateMachine = ControlState()
-    rospy.on_shutdown(handle_exit)
+    #rospy.on_shutdown(handle_exit)
     
     rospy.spin()
     
