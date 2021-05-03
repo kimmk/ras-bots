@@ -22,7 +22,7 @@ decisionGo = 2
 votecount = 2
 bridge = CvBridge()
 heightcorrect = 0
-xcorrect = 0.2
+xcorrect = 0.1
 
 class ControlState:
     def __init__(self):
@@ -67,7 +67,8 @@ class ControlState:
         #angle ranges from -0.1 to + 0.1
         sy += alpha *10.0 
         saz += -alpha *10.0
-        print(alpha, gate_dist, gate_x, gate_z)
+        
+        print("alpha,dist,x,y" ,(alpha, gate_dist, gate_x, gate_z))
         
         #if abs(gate_x < 0.1):
         #    gate_x = np.sign(gate_x)*0.1
@@ -97,16 +98,19 @@ class ControlState:
         sx = 1.7
         sz = 0.6
         stop = 1
+        for i in range(5):
+            print("GO")
         self.cmd_pub.publish(controls.hold())
         time.sleep(0.5)
         self.cmd_pub.publish(controls.control(y=sx, z = -sz))
         time.sleep(2.3)
         self.cmd_pub.publish(controls.control(y=-stop))
         time.sleep(1)
-        self.cmd_pub.publish(controls.hold())
+        self.cmd_pub.publish(controls.control(z = sz)
         time.sleep(1.5)
-        for i in range(10):
-            print("GO")
+        self.cmd_pub.publish(controls.hold())
+        time.sleep(1)
+        
         
         return 1
         

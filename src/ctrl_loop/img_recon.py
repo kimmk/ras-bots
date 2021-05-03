@@ -362,6 +362,13 @@ class GateDetector:
                 if debug_img is not None:
                     x,y,w,h = gate_bbox
                     cv2.rectangle(debug_img, (x,y), (x+w,y+h), (255,0,255), 2)
+                    image_x = debug_img.shape[1]//2
+                    image_y = debug_img.shape[0]//2
+                    
+                    center = (int(x+w//2.0),int(y+h//2.0))
+                    print("center x,y: ", center)
+                    cv2.rectangle(debug_img, (image_x-5,image_y-5), (image_x+5,image_y+5), (255,0,255), 2)
+                    cv2.rectangle(debug_img, (center[0]-5,center[1]-5), (center[0]+5,center[1]+5), (255,0,0), 2)
                 return(gate_bbox, h1,h2)
         return None
 
