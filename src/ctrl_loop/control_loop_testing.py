@@ -19,10 +19,10 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-votecount = 2
+votecount = 5
 bridge = CvBridge()
 heightcorrect = 0
-xcorrect = 0.1
+xcorrect = 0
 
 class ControlState:
     def __init__(self):
@@ -101,12 +101,12 @@ class ControlState:
         for i in range(5):
             print("GO")
         self.cmd_pub.publish(controls.hold())
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.cmd_pub.publish(controls.control(y=sx, z = -sz))
         time.sleep(2.3)
         self.cmd_pub.publish(controls.control(y=-stop))
         time.sleep(1)
-        self.cmd_pub.publish(controls.control(z = sz)
+        self.cmd_pub.publish(controls.control(z = sz))
         time.sleep(1.5)
         self.cmd_pub.publish(controls.hold())
         time.sleep(1)
@@ -144,7 +144,7 @@ class ControlState:
             x = x+xcorrect
             #print(angle)
             ######## Decider
-            if abs(x)<0.1 and abs(y)<0.1 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.2:
+            if abs(x)<0.05 and abs(y)<0.05 and abs(angle)<0.01 and abs(dist-self.target_dist)<0.1:
                 # foo = self.go_trough_gate()
                 # print("gogogo")
                 decision = decisionGo

@@ -93,12 +93,12 @@ class GateDetector:
     def __init__(self):
         self.gate_img = rospy.Publisher("gate_img", Image, queue_size=10) # Debug image of gate vision
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
-        self.kerneldim = 15
+        self.kerneldim_init = 15
         self.largest_element = 0
         
         #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right
         self.x_offset_6gon = 0
-        self.x_offset_4gon = 0
+        self.x_offset_4gon = 50
         #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
     def imshow_grayscale(self, img):    
@@ -113,7 +113,7 @@ class GateDetector:
     
     ## Main Function - Public
     def image_processing(self, cv2_img):
-        self.kerneldim = 15
+        self.kerneldim = self.kerneldim_init
         cv2_img = imutils.resize(cv2_img, width=600)
         gate_data = self.detect_gate(cv2_img.copy())
         attempts = 0
@@ -280,6 +280,8 @@ class GateDetector:
                 box.sort(key=lambda p: p[0]) # sort points by x coordinate
                 # h0 = box left edge height
                 # h1 = box right edge height
+                #take the 4 points, order them horizontally
+                #and then h0 = 'distance of points 0, 1' and h1 = 'distance of points 2, 3'
                 h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
                 
