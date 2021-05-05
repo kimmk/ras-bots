@@ -95,6 +95,10 @@ class GateDetector:
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
         self.kerneldim = 15
         self.largest_element = 0
+        
+        #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right
+        self.x_offset_6gon = 0
+        self.x_offset_4gon = 0
         #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
     def imshow_grayscale(self, img):    
@@ -135,7 +139,15 @@ class GateDetector:
         #     pose = self.createposition(gate_data)
         #     self.gate_pose.publish(pose)
 
+
+
+
     ## Orchestrator
+    # in: camera image
+    # out: gate position as:
+           # angle as seen from gate
+           # distance to gate
+           # gate % offset from image center (x,y)
     def detect_gate(self, img):
         gate = None
         debug_img = None
@@ -183,6 +195,12 @@ class GateDetector:
         return gate_data
 
     ## Image Manipulation
+    #in: camera image
+    #out: filtered image
+    #filters: 
+        #1. green mask
+        #2. hor and vert filters, effectively a distance filter (small objects get eliminated)
+        #3. threshold
     def filter_gates(self, img):
         # Apply HSV filter for green gates
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -221,7 +239,10 @@ class GateDetector:
             
         return thresh
 
-    ## Feature Detection
+    ########################### Feature Detection
+    
+    #in: all found contours from filtered image
+    #out: (gate bounding box (x,y,w,h), height_left_edge, height_right_edge ) 
     def find_gate_4gon(self, cnts, debug_img=None):
         # Select largest contour by it's bounding box
         gate_points = None
@@ -249,8 +270,11 @@ class GateDetector:
             epsilon = 0.05*cv2.arcLength(gate_points,closed = True)
             approx = cv2.approxPolyDP(gate_points,epsilon,closed = True)
             if len(approx) == 4:
+            
+                x,y,w,h = cv2.boundingRect(approx)
+                gate_bbox = x+self.x_offset_4gon, y, w, h
                 if debug_img is not None:
-                    x,y,w,h = cv2.boundingRect(approx)
+                    
                     cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
                 box = [c[0] for c in approx] # resolve annoying lists within list
                 box.sort(key=lambda p: p[0]) # sort points by x coordinate
@@ -258,9 +282,13 @@ class GateDetector:
                 # h1 = box right edge height
                 h0 = np.linalg.norm(np.array(box[0])-np.array(box[1]))
                 h1 = np.linalg.norm(np.array(box[2])-np.array(box[3]))
-                return (gate_box, h0, h1)
+                
+                return (gate_bbox, h0, h1)
         return None
-
+    
+    
+    #in: all found contours from filtered image
+    #out: (gate bounding box (x,y,w,h), height_left_edge, height_right_edge ) 
     def find_gate_6gon(self, cnts, debug_img):
         candidates = []
         for points in cnts:
@@ -332,6 +360,7 @@ class GateDetector:
                 #print(two_lefts)
             
             #bbox format x,y,w,h
+            # find left and right edge heights for any case of 3 or 4 corners
                 gate_top = gate_bbox[1]
                 gate_bot = gate_bbox[1]+gate_bbox[3]
                 corner_top = []
@@ -359,19 +388,29 @@ class GateDetector:
                     h2 = gate_bbox[3]-min(dist_right_top_edge, dist_right_bot_edge)
             #print(corner_bboxes[0][1])
                 #print([h1,h2])
+                x,y,w,h = gate_bbox
+                gate_bbox = x+self.x_offset_6gon, y, w, h
                 if debug_img is not None:
                     x,y,w,h = gate_bbox
                     cv2.rectangle(debug_img, (x,y), (x+w,y+h), (255,0,255), 2)
+                    image_x = debug_img.shape[1]//2
+                    image_y = debug_img.shape[0]//2
+                    
+                    center = (int(x+w//2.0),int(y+h//2.0))
+                    print("center x,y: ", center)
+                    cv2.rectangle(debug_img, (image_x-5,image_y-5), (image_x+5,image_y+5), (255,0,255), 2)
+                    cv2.rectangle(debug_img, (center[0]-5,center[1]-5), (center[0]+5,center[1]+5), (255,0,0), 2)
+                
                 return(gate_bbox, h1,h2)
         return None
 
     ## Gate Maths
+    # in: gate bounding box, height_left_edge, height_right_edge
+    # out: gate position as:
+           # angle as seen from gate
+           # distance to gate
+           # gate % offset from image center (x,y)
     def detect_gate_angle(self, img, bbox, h1,h2):
-        #napkin calculations reveal:
-                #sin alpha = (r1-r2)/(w/2), with one r being close edge, other being center, w being actual gate width=0.7m
-                #sin alpha = alpha if angle < 40deg
-                #r = cali/h, with cali=px*dist=?, h= bbox height
-                #-> alpha = cali/0.35*(1/h1-1/h2)
         cali = 250.0
         gate_w = 0.7
         #angle = cali/(gate_w/2.0)*(1.0/h1-1.0/h2)
