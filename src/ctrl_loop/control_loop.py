@@ -125,8 +125,6 @@ class ControlState:
         time.sleep(1.5)
         self.cmd_pub.publish(controls.hold())
         time.sleep(1.5)
-        for i in range(10):
-            print("GO")
         
         return 1
 
