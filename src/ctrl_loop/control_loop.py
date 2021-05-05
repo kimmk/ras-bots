@@ -131,6 +131,7 @@ class ControlState:
         return 1
 
     def search(self):
+        logging.info("Decision Control - Search for Gate")
         self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.6 ))
         time.sleep(0.5)
         
@@ -139,7 +140,7 @@ class ControlState:
             self.metronome = -15
         
     def camera_callback(self, img):
-        logging.info("Camera Callback")
+        ## logging.info("Camera Callback") ## Happens too often
         if devel_mode:
             cv2_img = img
         else:
