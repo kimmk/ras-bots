@@ -243,20 +243,20 @@ class GateDetector:
     def find_gate_4gon(self, cnts, debug_img=None):
         # Select largest contour by it's bounding box
         gate_points = None
-        gate_center = None
         gate_box = None
         biggest_box = 0
         box_ratio = 0
         for points in cnts:
-            gate_box = cv2.boundingRect(points)
-            x,y,w,h = gate_box
+            box = cv2.boundingRect(points)
+            x,y,w,h = box
             box_sz = w*h
             
             if box_sz > biggest_box and box_sz > 30000:
                 biggest_box = box_sz
                 box_ratio = (w+0.0)/h
                 gate_points = points
-                gate_center = (x+w//2,y+h//2)
+                gate_box = box
+                #gate_center = (x+w//2,y+h//2)
                 
             #store largest element for calibration check
             if box_sz > self.largest_element:
