@@ -97,8 +97,8 @@ class GateDetector:
         self.largest_element = 0
         
         #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right
-        self.x_offset_6gon = 0
-        self.x_offset_4gon = 50
+        self.x_offset_6gon = 5
+        self.x_offset_4gon = 0
         #rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera image
 
     def imshow_grayscale(self, img):    
@@ -117,7 +117,7 @@ class GateDetector:
         cv2_img = imutils.resize(cv2_img, width=600)
         gate_data = self.detect_gate(cv2_img.copy())
         attempts = 0
-        while gate_data is None and attempts < 4:
+        while gate_data is None and attempts < 5:
             #largest element updated in find_gate_4gon
             if self.largest_element < 15000:
                 self.kerneldim -= 2
@@ -272,10 +272,18 @@ class GateDetector:
             if len(approx) == 4:
             
                 x,y,w,h = cv2.boundingRect(approx)
-                gate_bbox = x+self.x_offset_4gon, y, w, h
+                x = x+self.x_offset_4gon
+                gate_bbox = x, y, w, h
                 if debug_img is not None:
                     
                     cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
+                    image_x = debug_img.shape[1]//2
+                    image_y = debug_img.shape[0]//2
+                    
+                    center = (int(x+w//2.0),int(y+h//2.0))
+                    print("center x,y: ", center)
+                    cv2.rectangle(debug_img, (image_x-5,image_y-5), (image_x+5,image_y+5), (255,0,255), 2)
+                    cv2.rectangle(debug_img, (center[0]-5,center[1]-5), (center[0]+5,center[1]+5), (255,0,0), 2)
                 box = [c[0] for c in approx] # resolve annoying lists within list
                 box.sort(key=lambda p: p[0]) # sort points by x coordinate
                 # h0 = box left edge height
