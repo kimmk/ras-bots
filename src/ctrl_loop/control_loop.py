@@ -104,12 +104,25 @@ class ControlState:
         #angle ranges from -0.1 to + 0.1
         sy += alpha *10.0 
         saz += -alpha *10.0
-        print(alpha, gate_dist, gate_x, gate_z)
+        
+        print("alpha,dist,x,y" ,(alpha, gate_dist, gate_x, gate_z))
+        
+        #if abs(gate_x < 0.1):
+        #    gate_x = np.sign(gate_x)*0.1
+        
+        #if abs(gate_z < 0.1):
+        #    gate_z = np.sign(gate_z)*0.1
+        
+        control_multiple = 1
+        
+        gate_x = gate_x*control_multiple
+        
+        gate_z = gate_z*control_multiple
         
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
-        
+        sx = sx*control_multiple
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
         #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
