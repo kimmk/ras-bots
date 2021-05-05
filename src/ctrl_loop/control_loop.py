@@ -29,7 +29,7 @@ heightcorrect = 0
 ################################### DEVEL VARS & DEFS
 #devel mode = 1: picking single images from file to process
 #devel mode = 0: picking images from subscriber image stream
-devel_mode = 1
+devel_mode = 0
 debug_mode = 1
 dateTimeFormat = "%d-%m-%Y_%H:%M:%S"
 
