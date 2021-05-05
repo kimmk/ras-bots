@@ -22,8 +22,9 @@ from datetime import datetime
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-magicNumber = 10
+votecount = 7
 bridge = CvBridge()
+heightcorrect = 0
 
 ################################### DEVEL VARS & DEFS
 #devel mode = 1: picking single images from file to process
@@ -38,13 +39,13 @@ class ControlState:
         mylogger = logging.getLogger('decisionControl')
         logging.info("----------------------")
         logging.info("Decision Control START")
-        
         self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.gateDetector = GateDetector()
         self.decisionTally = np.array([0,0,0])
         self.decisionTotals = 0
         self.lastGate = [0,0,(0,0)]
         self.target_dist = 0.8
+        self.metronome = 0
 
         if devel_mode:
             logging.info("DEVEL MODE")
@@ -75,28 +76,67 @@ class ControlState:
 
     def move_around_gate(self, alpha, gate_x, gate_z, gate_dist):
         logging.info("Decision Control - Angle Correction")
+        #         y+
+        #         ^
+        #    x- <- ->  x+
+        #         v
+        #         y-
+        #   . = z+
+        #   + = z-
+        #   clockwise = az+      ?
+        #   cntrclockwise = az-  ?
+        #
+        
+        
+        #   looking from gate: if drone is left:  alpha < 0
+        #                                  right: alpha > 0
+        #looking from drone: if gate is left:  x < 0
+        #                               right: x > 0
+        #                               high:  z < 0
+        #                               low:   z > 0
+        #print("move")
+        #print(alpha,gate_x,gate_z,gate_dist)
         #see what input is like, the convert alpha to deg, with 0 = center, +90 = left, -90 = right
         #convert x and z to % of image
         #set speeds to 0
         sx,sy,sz,saz = 0,0,0,0
         #TODO check signs for all
-        sy += alpha  #at 90 deg, speed=max=pi/2
-        saz += alpha/10
+        #angle ranges from -0.1 to + 0.1
+        sy += alpha *10.0 
+        saz += -alpha *10.0
+        print(alpha, gate_dist, gate_x, gate_z)
+        
         sy += gate_x
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 1) #max speed =1
+        
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
-        time.sleep(0.5)
-        self.cmd_pub.publish(controls.hold())
+        #self.cmd_pub.publish(controls.control(az = 1))
+        #time.sleep(0.5)
+        #self.cmd_pub.publish(controls.hold())
 
     def go_trough_gate(self):
         logging.info("Decision Control - Go Through Gate")
         sx = 1
-        self.cmd_pub.publish(controls.control(y=sx))
-        time.sleep(2)
+        sz = 0.6
+        self.cmd_pub.publish(controls.control(y=sx, z = -sz))
+        time.sleep(1.5)
+        self.cmd_pub.publish(controls.control(y=sx, z = sz))
+        time.sleep(1.5)
         self.cmd_pub.publish(controls.hold())
-        time.sleep(0.5)
+        time.sleep(1.5)
+        for i in range(10):
+            print("GO")
+        
         return 1
+
+    def search(self):
+        self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.6 ))
+        time.sleep(0.5)
+        
+        self.metronome += 1
+        if self.metronome > 10:
+            self.metronome = -15
         
     def camera_callback(self, img):
         logging.info("Camera Callback")
@@ -124,11 +164,11 @@ class ControlState:
                 decision = decisionCorrection
                 dWeight = 2
         self.decisionTotals += 1
-        logging.info("Total Decisions: "+str(self.decisionTotals))
         self.decisionTally[decision] += dWeight
-        if self.decisionTotals < magicNumber:
+        if self.decisionTotals < votecount:
             return
 
+        logging.info("Total Decisions: "+str(self.decisionTotals))
         decision = np.argmax(self.decisionTally)
         logging.info("DecisionTally: "+np.array2string(self.decisionTally))
         logging.info("Decision: "+str(decision))
@@ -140,12 +180,11 @@ class ControlState:
         angle, dist, (x, y) = self.lastGate
 
         if decision == decisionNone:
-            pass
-            ##this is the part where we pretend that we know what we are doing
+            self.search()
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
         else: 
-            self.go_trough_gate()
+            foo = self.go_trough_gate()
 
 def handle_exit(signum, frame):
     logging.info("Decision Control - Handle Exit")
