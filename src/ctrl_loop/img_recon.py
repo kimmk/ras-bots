@@ -22,6 +22,7 @@ bridge = CvBridge()
 devel_mode = 1
 debug_mode = 0
 dateTimeFormat = "%d-%m-%Y_%H:%M:%S"
+sloperun = 0
 
 # Not deleted: required when debugging without Drone
 # uncomment calls to this def to use it
@@ -91,9 +92,10 @@ def camera_callback(self, img):
 ######################################### Image Detection
 class GateDetector:
     def __init__(self):
-        self.gate_img = rospy.Publisher("gate_img", Image, queue_size=10) # Debug image of gate vision
+        self.gate_img = rospy.Publisher("gate_img", Image, queue_size=1) # Debug image of gate vision
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
-        self.kerneldim_init = 15
+        self.bw_img_pub = rospy.Publisher("bw_img", Image, queue_size=1) # Debug image of gate vision
+        self.kerneldim_init = 13
         self.largest_element = 0
         
         #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right
@@ -117,7 +119,7 @@ class GateDetector:
         cv2_img = imutils.resize(cv2_img, width=600)
         gate_data = self.detect_gate(cv2_img.copy())
         attempts = 0
-        while gate_data is None and attempts < 5:
+        while gate_data is None and attempts < 0:
             #largest element updated in find_gate_4gon
             if self.largest_element < 15000:
                 self.kerneldim -= 2
@@ -204,10 +206,10 @@ class GateDetector:
     def filter_gates(self, img):
         # Apply HSV filter for green gates
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        clr_gate = np.array([38, 195, 143])
-        clr_range = np.array([10, 60, 75])
-        lower = np.array(clr_gate-clr_range, dtype="uint8")
-        upper = np.array(clr_gate+clr_range, dtype="uint8")
+        clr_gate = np.array([38, 195-30, 143-20])
+        clr_range = np.array([10, 60+30, 75+20])
+        lower = np.array(clr_gate-clr_range)
+        upper = np.array(clr_gate+clr_range)
         mask = cv2.inRange(img_hsv, lower, upper)
         img_masked = cv2.bitwise_and(img_hsv, img_hsv, mask=mask)
 
@@ -225,14 +227,14 @@ class GateDetector:
         erodeV=cv2.erode(dilateH, kernelV, iterations=1)
         dilateV=cv2.dilate(erodeV, kernelV, iterations=1)
         thresh = cv2.threshold(dilateV, 10, 255, cv2.THRESH_BINARY)[1]
-        #self.gate_img.publish(bridge.cv2_to_imgmsg(dilateV))
-        if devel_mode and False:
-            #self.imshow_bgr(gray)
+        self.bw_img_pub.publish(bridge.cv2_to_imgmsg(gray))
+        #if devel_mode:
+        #self.imshow_bgr(img)
             #print("blurred")
-            self.imshow_bgr(blurred)
+            #self.imshow_bgr(blurred)
             #print("H")
             #self.imshow_bgr(dilateH)
-            logging.debug("V")
+            #logging.debug("V")
             #self.imshow_bgr(dilateV)
             #print("thresh")
             #self.imshow_bgr(thresh)
@@ -255,7 +257,7 @@ class GateDetector:
             x,y,w,h = gate_box
             box_sz = w*h
             
-            if box_sz > biggest_box and box_sz > 30000:
+            if box_sz > biggest_box and box_sz > 10000:
                 biggest_box = box_sz
                 box_ratio = (w+0.0)/h
                 gate_points = points
@@ -306,11 +308,13 @@ class GateDetector:
             #approx = cv2.approxPolyDP(points,epsilon,True)
             x,y,w,h = cv2.boundingRect(points)
             box_sz = w*h
-            
-            if box_sz > 1000:
+            boxlimit = 1000
+            if sloperun:
+                boxlimit = 100
+            if box_sz > boxlimit:
                 epsilon = 0.03*cv2.arcLength(points,closed = True)
                 approx = cv2.approxPolyDP(points,epsilon,closed = True)
-                if len(approx) >=5 and len(approx) <=7:
+                if len(approx) >=4 and len(approx) <=8:
                     candidates.append((approx, box_sz))
                 
                 if debug_img is not None:

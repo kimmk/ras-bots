@@ -19,8 +19,9 @@ import time
 decisionNone = 0
 decisionCorrection = 1
 decisionGo = 2
-votecount = 5
+votecount = 6
 bridge = CvBridge()
+sloperun = 0
 
 
 class ControlState:
@@ -38,10 +39,14 @@ class ControlState:
         
         self.lastdecision = decisionNone
         
+        
+        
     def reset_metronome(self):
-        self.metronome_sweepsize=3
-        self.metronome = 0
+        self.metronome_sweepsize=4
+        self.metronome = self.metronome_sweepsize 
         self.metronomedir = 1
+        self.anglediff = 0
+        
 
     def move_around_gate(self, alpha, gate_dist, gate_x, gate_z):
         #         y+
@@ -92,13 +97,13 @@ class ControlState:
         
         sy += gate_x
         sz += -gate_z
-        sx = min(gate_dist - self.target_dist, 0.4) #max speed =1
+        sx = min(gate_dist - self.target_dist, 0.2) #max speed =1
         sx = sx*control_multiple
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
         #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
         #self.cmd_pub.publish(controls.hold())
-        self.reset_metronome()
+        #self.reset_metronome()
         
         
 
@@ -119,7 +124,7 @@ class ControlState:
         time.sleep(0.5)
         
         self.cmd_pub.publish(controls.control(y=sx, z = -sz))
-        time.sleep(2)
+        time.sleep(1.5)
         self.cmd_pub.publish(controls.control(y=-stop))
         time.sleep(1)
         self.cmd_pub.publish(controls.control(z = sz))
@@ -129,17 +134,31 @@ class ControlState:
         self.reset_metronome()
         
         return 1
-        
+    
+    
+    
+    
     def search(self):
         self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.5 ))
         time.sleep(0.2)
         
         self.metronome += self.metronomedir
+        self.anglediff += self.metronomedir
+        
+        print("angle,metronome", self.anglediff, self.metronome)
+        
         if abs(self.metronome) > self.metronome_sweepsize:
             self.metronomedir = -self.metronomedir
-            self.metronome_sweepsize +=3
+            self.metronome_sweepsize +=1
+            
+        if self.anglediff == 0 and self.metronome_sweepsize > 5:
+            self.cmd_pub.publish(controls.control(y=0.8))
+            time.sleep(1)
+            if sloperun:
+                time.sleep(3)
+            print("go forward")
         
-        if abs(self.metronome_sweepsize) > 15:
+        if abs(self.metronome_sweepsize) > 8:
             handle_exit(None,None)
     
     
