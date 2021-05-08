@@ -75,7 +75,8 @@ class Lander(object):
         # Estimate craft position, height, angle
         x = (a_pos[0] + b_pos[0]) // 2
         y = (a_pos[1] + b_pos[1]) // 2
-        h = 1.0
+        ab_dist = np.linalg.norm(np.array(a_pos)-np.array(b_pos))
+        h = 1.0 / ab_dist
         a = 0
 
         # Calculate initial velocity vector
