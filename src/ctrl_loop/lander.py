@@ -110,10 +110,16 @@ class Lander(object):
         # Debug drawing
         if debug_img is not None:
             dh,dw,_ = debug_img.shape
+            cv2.circle(debug_img, (int(self.pid_x.setpoint),int(self.pid_y.setpoint)), 5, (80,255,255), 2)
             cv2.circle(debug_img, (x,y), 5, (255,255,80), 2)
             cv2.circle(debug_img, a_pos, 3, (0,255,0), -1)
             cv2.circle(debug_img, b_pos, 3, (255,0,0), -1)
             cv2.putText(debug_img, "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x)/iw, float(y)/ih, h, np.rad2deg(a)), (dw*1/8, dh*1/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+            cv2.putText(debug_img, "vel: {:.2f} {:.2f}".format(vr[0], vr[1]), (dw*1/8, dh*2/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+            fva = (dw//2,dh*4//5)
+            fvb = (fva[0]+int(vr[0]*10),fva[1]+int(vr[1]*10))
+            cv2.line(debug_img, fva, fvb, (255,255,0), 2)
+            cv2.circle(debug_img, fva, 2, (255,255,255), -1)
 
         return [vr[0], vr[1]]
 
