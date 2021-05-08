@@ -20,6 +20,11 @@ def box_center(box):
 def angle_between(p1, p2):
     return np.arctan2(p1[0]-p2[0], p1[1]-p2[1])
 
+def rot_vel(vel, a):
+    c, s = np.cos(a), np.sin(a)
+    R = np.array(((c, -s), (s, c)))
+    return np.dot(vel, R)
+
 class Lander(object):
     def __init__(self):
         self.pid_x = PID(10.0, 0, 3.0)
@@ -100,6 +105,7 @@ class Lander(object):
         v = (1.0-(1.0/(h+1.0))) * 1.0 * v
 
         # TODO: Rotate velocity vector according to the craft angle
+        vr = rot_vel(v, a)
 
         # Debug drawing
         if debug_img is not None:
@@ -109,7 +115,7 @@ class Lander(object):
             cv2.circle(debug_img, b_pos, 3, (255,0,0), -1)
             cv2.putText(debug_img, "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x)/iw, float(y)/ih, h, np.rad2deg(a)), (dw*1/8, dh*1/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
-        return v
+        return [vr[0], vr[1]]
 
 def handle_exit(signum, frame):
     import sys
