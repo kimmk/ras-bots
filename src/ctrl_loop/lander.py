@@ -104,7 +104,7 @@ class Lander(object):
         # Apply height modifier and generic velocity multiplier
         v = (1.0-(1.0/(h+1.0))) * 1.0 * v
 
-        # TODO: Rotate velocity vector according to the craft angle
+        # Rotate velocity vector according to the craft angle
         vr = rot_vel(v, a)
 
         # Debug drawing
@@ -157,14 +157,11 @@ class UsbCamTest:
         self.led_b = [[115,100,200],[125,255,255]]
 
     def usb_cam_callback(self, msg):
-        f = open("test.img", "w")
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
         img = imutils.resize(img, width=300)
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        #print(img_hsv)
-        f.write(str(img_hsv))
-        f.close()
         vel = self.lander.land_update(img_hsv, self.led_a, self.led_b, debug_img=img)
+        print(vel)
         self.debug_img.publish(bridge.cv2_to_imgmsg(img))
 
 def test_usb_cam():

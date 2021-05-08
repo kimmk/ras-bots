@@ -20,14 +20,15 @@ class LandingTest(object):
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.vel_timeout = None
         self.lander = lander.Lander()
-        self.led_a = [[0,0,0], [0,0,0]]
-        self.led_b = [[0,0,0], [0,0,0]]
+        self.led_a = [[0,80,150],[15,255,255]]
+        self.led_b = [[115,100,200],[125,255,255]]
 
     def reset_vel(self):
         self.cmd_vel.publish(controls.hold())
 
     def camera_callback(self, msg):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
+        img = imutils.resize(img, width=300)
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         v = self.lander.land_update(img, self.led_a, self.led_b, debug_img=img)
 
