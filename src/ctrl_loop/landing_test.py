@@ -31,7 +31,7 @@ class LandingTest(object):
         v = self.lander.land_update(img, self.led_a, self.led_b, debug_img=debug_img)
 
         # Publish velocity command
-        cmd_vel.publish(controls.control(v[0], v[1]))
+        self.cmd_vel.publish(controls.control(v[0], v[1]))
         
         # Setup velocity timeout if set
         if self.vel_timeout is not None:
