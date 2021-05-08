@@ -23,7 +23,6 @@ class Lander(object):
         self.pid_y = PID(10.0, 0, 3.0)
 
     def find_leds(self, img, hsv_min, hsv_max, debug_img=None):
-        debug_img = img.copy()
 
         # Filter LED color only
         lower = np.array(hsv_min, dtype="uint8")
@@ -56,19 +55,16 @@ class Lander(object):
         return leds
 
     # img:              landing camera image in cv2 HSV format
-    # cmd_vel:          velocity topic for Tello drone
     # led_a, led_b:     HSV color ranges for front led (led_a) and back led (led_b)
     # land_pos:         target landing position in image, in percentages of X and Y
     # debug_img:        if set, debug info will be drawn to this image
-    def land_update(self, img, cmd_vel, led_a, led_b, land_pos=(0.5,0.5), debug_img=None):
-        self.last_vel_cmd = cmd_vel
+    def land_update(self, img, led_a, led_b, land_pos=(0.5,0.5), debug_img=None):
 
         # Find LED candidate positions
         leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
         leds_b = self.find_leds(img, led_b[0], led_b[1], debug_img)
         if len(leds_a) == 0 or len(leds_b) == 0:
-            self.reset_vel()
-            return
+            return np.array([0,0])
 
         # Right now, just pick the largest leds. Maybe could do some fancy size matching here?
         a_box = leds_a[0]
@@ -79,7 +75,7 @@ class Lander(object):
         # Estimate craft position, height, angle
         x = (a_pos[0] + b_pos[0]) // 2
         y = (a_pos[1] + b_pos[1]) // 2
-        h = 0
+        h = 1.0
         a = 0
 
         # Calculate initial velocity vector
@@ -99,6 +95,11 @@ class Lander(object):
 
         # TODO: Rotate velocity vector according to the craft angle
 
+        # Debug drawing
+        if debug_img is not None:
+            cv2.circle(debug_img, a_pos, 4, (160,255,255), -1)
+            cv2.circle(debug_img, b_pos, 4, (40,255,255), -1)
+
         return v
 
 if __name__ == '__main__':
@@ -106,6 +107,8 @@ if __name__ == '__main__':
     img = cv2.imread("test.png")
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     debug_img = img_hsv.copy()
-    leds = lander.find_leds(img_hsv, [0,240,110], [3,255,255], debug_img=debug_img)
+    led_a = [[0,240,110],[10,255,255]]
+    led_b = [[110,240,110],[130,255,255]]
+    leds = lander.land_update(img_hsv, led_a, led_b, debug_img=debug_img)
     imshow_hsv(debug_img)
     print(leds)
