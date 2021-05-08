@@ -47,7 +47,7 @@ class Lander(object):
             if w*h > 20:
                 leds.append(led_box)
                 if debug_img is not None:
-                    cv2.rectangle(debug_img, (x,y), (x+w,y+h), (100,255,255), 2)
+                    cv2.rectangle(debug_img, (x,y), (x+w,y+h), (255,0,255), 2)
 
         # Sort by size
         leds.sort(key=lambda box: box[2]*box[3], reverse=True)
@@ -57,7 +57,7 @@ class Lander(object):
     # img:              landing camera image in cv2 HSV format
     # led_a, led_b:     HSV color ranges for front led (led_a) and back led (led_b)
     # land_pos:         target landing position in image, in percentages of X and Y
-    # debug_img:        if set, debug info will be drawn to this image
+    # debug_img:        debug image in BGR8 format. if set, debug info will be drawn to this image
     def land_update(self, img, led_a, led_b, land_pos=(0.5,0.5), debug_img=None):
 
         # Find LED candidate positions

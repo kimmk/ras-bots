@@ -16,6 +16,7 @@ bridge = CvBridge()
 class LandingTest(object):
     def __init__(self):
         rospy.Subscriber("/image", Image, self.camera_callback)  # Tello camera
+        self.debug_img = rospy.Publisher("/debug_img", Image, queue_size=10)
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.vel_timeout = None
         self.lander = lander.Lander()
@@ -26,9 +27,9 @@ class LandingTest(object):
         self.cmd_vel.publish(controls.hold())
 
     def camera_callback(self, msg):
-        img = bridge.imgmsg_to_cv2(msg, "hsv8")
-        debug_img = img.copy()
-        v = self.lander.land_update(img, self.led_a, self.led_b, debug_img=debug_img)
+        img = bridge.imgmsg_to_cv2(msg, "bgr8")
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        v = self.lander.land_update(img, self.led_a, self.led_b, debug_img=img)
 
         # Publish velocity command
         self.cmd_vel.publish(controls.control(v[0], v[1]))
@@ -37,6 +38,8 @@ class LandingTest(object):
         if self.vel_timeout is not None:
             self.vel_timeout.shutdown()
         self.vel_timeout = rospy.Timer(rospy.Duration(0.5), self.reset_vel, oneshot=True)
+
+        self.debug_img.publish(bridge.cv2_to_imgmsg(img))
 
 def handle_exit(signum, frame):
     cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
