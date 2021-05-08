@@ -80,8 +80,9 @@ class Lander(object):
         a = 0
 
         # Calculate initial velocity vector
-        self.pid_x.setpoint = img.shape[0] * land_pos[0]
-        self.pid_y.setpoint = img.shape[1] * land_pos[1]
+        iw, ih, _ = img.shape
+        self.pid_x.setpoint = iw * land_pos[0]
+        self.pid_y.setpoint = ih * land_pos[1]
       
         dx = self.pid_x(x)
         dy = self.pid_x(y)
@@ -98,12 +99,26 @@ class Lander(object):
 
         # Debug drawing
         if debug_img is not None:
-            cv2.circle(debug_img, a_pos, 4, (160,255,255), -1)
-            cv2.circle(debug_img, b_pos, 4, (40,255,255), -1)
+            dw,dh,_ = debug_img.shape
+            cv2.circle(debug_img, (x,y), 5, (255,255,80), 2)
+            cv2.circle(debug_img, a_pos, 3, (0,255,0), -1)
+            cv2.circle(debug_img, b_pos, 3, (255,0,0), -1)
+            cv2.putText(debug_img, "xy: {:.2f} {:.2f}".format(float(x)/iw, float(y)/ih), (dw*1/4, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
         return v
 
-if __name__ == '__main__':
+def handle_exit(signum, frame):
+    import sys
+    cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
+    cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
+    rospy.sleep(0.5)
+    print("Landing and reseting velocity")
+    cmd_land.publish(Empty())
+    cmd_vel.publish(controls.hold())
+    rospy.signal_shutdown("Landing and reseting velocity")
+    sys.exit(0)
+
+def test_file():
     lander = Lander()
     img = cv2.imread("test.png")
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -113,3 +128,42 @@ if __name__ == '__main__':
     vel = lander.land_update(img_hsv, led_a, led_b, debug_img=debug_img)
     imshow_hsv(debug_img)
     print(vel)
+
+import rospy
+from cv_bridge import CvBridge, CvBridgeError
+from sensor_msgs.msg import Image
+from std_msgs.msg import Empty
+from geometry_msgs.msg import Twist
+import controls
+bridge = CvBridge()
+
+class UsbCamTest:
+    def __init__(self):
+        rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_callback)
+        self.debug_img = rospy.Publisher("/debug_img", Image, queue_size=10) 
+        self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
+        self.lander = Lander()
+        self.led_a = [[0,80,150],[15,255,255]]
+        self.led_b = [[115,100,200],[125,255,255]]
+
+    def usb_cam_callback(self, msg):
+        f = open("test.img", "w")
+        img = bridge.imgmsg_to_cv2(msg, "bgr8")
+        img = imutils.resize(img, width=300)
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        #print(img_hsv)
+        f.write(str(img_hsv))
+        f.close()
+        vel = self.lander.land_update(img_hsv, self.led_a, self.led_b, debug_img=img)
+        self.debug_img.publish(bridge.cv2_to_imgmsg(img))
+
+def test_usb_cam():
+    rospy.init_node('lander_test', anonymous=True)
+    test = UsbCamTest()
+    rospy.spin()
+
+if __name__ == '__main__':
+    import signal
+    signal.signal(signal.SIGINT, handle_exit)
+    #test_file()
+    test_usb_cam()
