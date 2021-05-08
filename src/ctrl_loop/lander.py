@@ -120,6 +120,10 @@ class Lander(object):
             fvb = (fva[0]+int(vr[0]*10),fva[1]+int(vr[1]*10))
             cv2.line(debug_img, fva, fvb, (255,255,0), 2)
             cv2.circle(debug_img, fva, 2, (255,255,255), -1)
+            fva = (x,y)
+            rot = rot_vel([20,0], a)
+            fvb = (x+int(rot[0]), y+int(rot[1]))
+            cv2.line(debug_img, fva, fvb, (255,255,255), 2)
 
         return [vr[0], vr[1]]
 
