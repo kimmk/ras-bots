@@ -17,6 +17,9 @@ def imshow_hsv(img):
 def box_center(box):
     return (box[0]+box[2]//2, box[1]+box[3]//2)
 
+def angle_between(p1, p2):
+    return np.arctan2(p1[0]-p2[0], p1[1]-p2[1])
+
 class Lander(object):
     def __init__(self):
         self.pid_x = PID(10.0, 0, 3.0)
@@ -79,7 +82,7 @@ class Lander(object):
         y = (a_pos[1] + b_pos[1]) // 2
         ab_dist = np.linalg.norm(a_pos/idim-b_pos/idim)
         h = 1.0 / ab_dist
-        a = 0
+        a = angle_between(a_pos, b_pos)
 
         # Calculate initial velocity vector
         self.pid_x.setpoint = iw * land_pos[0]
@@ -104,7 +107,7 @@ class Lander(object):
             cv2.circle(debug_img, (x,y), 5, (255,255,80), 2)
             cv2.circle(debug_img, a_pos, 3, (0,255,0), -1)
             cv2.circle(debug_img, b_pos, 3, (255,0,0), -1)
-            cv2.putText(debug_img, "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x)/iw, float(y)/ih, h, a), (dw*1/8, dh*1/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+            cv2.putText(debug_img, "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x)/iw, float(y)/ih, h, np.rad2deg(a)), (dw*1/8, dh*1/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
         return v
 
