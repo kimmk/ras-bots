@@ -127,6 +127,9 @@ class Lander(object):
 
         return [vr[0], vr[1]]
 
+#########################################################################
+### NOTE: Everything below from here is debug code and may be removed ###
+#########################################################################
 def handle_exit(signum, frame):
     import sys
     cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
