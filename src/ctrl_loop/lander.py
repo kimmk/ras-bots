@@ -73,14 +73,15 @@ class Lander(object):
         b_pos = box_center(b_box)
 
         # Estimate craft position, height, angle
+        ih, iw, _ = img.shape
+        idim = np.array([float(iw),float(ih)])
         x = (a_pos[0] + b_pos[0]) // 2
         y = (a_pos[1] + b_pos[1]) // 2
-        ab_dist = np.linalg.norm(np.array(a_pos)-np.array(b_pos))
+        ab_dist = np.linalg.norm(a_pos/idim-b_pos/idim)
         h = 1.0 / ab_dist
         a = 0
 
         # Calculate initial velocity vector
-        iw, ih, _ = img.shape
         self.pid_x.setpoint = iw * land_pos[0]
         self.pid_y.setpoint = ih * land_pos[1]
       
@@ -99,11 +100,11 @@ class Lander(object):
 
         # Debug drawing
         if debug_img is not None:
-            dw,dh,_ = debug_img.shape
+            dh,dw,_ = debug_img.shape
             cv2.circle(debug_img, (x,y), 5, (255,255,80), 2)
             cv2.circle(debug_img, a_pos, 3, (0,255,0), -1)
             cv2.circle(debug_img, b_pos, 3, (255,0,0), -1)
-            cv2.putText(debug_img, "xy: {:.2f} {:.2f}".format(float(x)/iw, float(y)/ih), (dw*1/4, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+            cv2.putText(debug_img, "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x)/iw, float(y)/ih, h, a), (dw*1/8, dh*1/10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
         return v
 
