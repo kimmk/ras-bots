@@ -91,7 +91,7 @@ class Lander(object):
         v = v / norm
 
         # Apply height modifier and generic velocity multiplier
-        v = (1-(1/h)) * 1.0 * v
+        v = (1.0-(1.0/(h+1.0))) * 1.0 * v
 
         # TODO: Rotate velocity vector according to the craft angle
 
@@ -109,6 +109,6 @@ if __name__ == '__main__':
     debug_img = img_hsv.copy()
     led_a = [[0,240,110],[10,255,255]]
     led_b = [[110,240,110],[130,255,255]]
-    leds = lander.land_update(img_hsv, led_a, led_b, debug_img=debug_img)
+    vel = lander.land_update(img_hsv, led_a, led_b, debug_img=debug_img)
     imshow_hsv(debug_img)
-    print(leds)
+    print(vel)
