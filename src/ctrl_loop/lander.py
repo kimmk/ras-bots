@@ -72,7 +72,7 @@ class Lander(object):
         leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
         leds_b = self.find_leds(img, led_b[0], led_b[1], debug_img)
         if len(leds_a) == 0 or len(leds_b) == 0:
-            return np.array([0,0])
+            return [0,0]
 
         # Right now, just pick the largest leds. Maybe could do some fancy size matching here?
         a_box = leds_a[0]
