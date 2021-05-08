@@ -94,7 +94,7 @@ class Lander(object):
         self.pid_y.setpoint = ih * land_pos[1]
       
         dx = self.pid_x(x)
-        dy = self.pid_x(y)
+        dy = self.pid_y(y)
         v = np.array([dx,dy])
 
         # Normalize velocity vector
