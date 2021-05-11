@@ -81,7 +81,9 @@ class Lander(object):
     def land_update(self, img, led_a, led_b, land_pos=(0.5, 0.5), debug_img=None):
 
         #filter only moving areas
-        img = deriv_filter(img)
+        img = self.deriv_filter(img)
+        if debug_img is not None:
+            debug_img = self.deriv_filter(debug_img)
 
         # Find LED candidate positions
         leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
@@ -181,6 +183,7 @@ class Lander(object):
         #store as grayscale (HSV V channel)
         img_channels = cv2.split(img)
         self.background_img = img_channels[2]
+        print("bg image ready")
         return 1
 
     def reset_background(self):
@@ -239,11 +242,18 @@ class UsbCamTest:
         rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_callback)
         #rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_led_calibration)
         self.debug_img = rospy.Publisher("/debug_img", Image, queue_size=10)
+        self.bg_img = rospy.Publisher("/bg_img", Image, queue_size=10)
         self.led_img = rospy.Publisher("/led_img", Image, queue_size=10)
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.lander = Lander()
-        self.led_a = [[0, 80, 150], [15, 255, 255]]
-        self.led_b = [[115, 100, 200], [125, 255, 255]]
+        # calibrated with tool script
+        self.led_a = [[116, 92, 111], [196, 150, 255]]
+        self.led_b = [[106, 105, 178], [124, 221, 255]]
+
+        # hand calibrated
+        #self.led_a = [[0, 80, 240], [15, 130, 255]]
+        #self.led_b = [[115, 100, 200], [125, 255, 255]]
+
 
     def usb_cam_led_calibration(self, msg):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -286,12 +296,10 @@ class UsbCamTest:
         if not self.lander.init_background(img_hsv):
             return
 
-
-
         vel = self.lander.land_update(img_hsv, self.led_a, self.led_b, debug_img=img)
-        print(vel)
+        #print(vel)
+        self.bg_img.publish(bridge.cv2_to_imgmsg(self.lander.background_img))
         self.debug_img.publish(bridge.cv2_to_imgmsg(img))
-
 
 def test_usb_cam():
     rospy.init_node('lander_test', anonymous=True)
