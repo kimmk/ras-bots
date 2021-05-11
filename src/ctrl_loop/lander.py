@@ -102,7 +102,7 @@ class Lander(object):
         y = (a_pos[1] + b_pos[1]) // 2
         ab_dist = np.linalg.norm(a_pos / idim - b_pos / idim)
         h = 1.0 / ab_dist
-        a = angle_between(a_pos, b_pos)
+        a = ((angle_between(a_pos, b_pos) + np.pi * 1.5) % (np.pi * 2)) - np.pi
 
         # Calculate initial velocity vector
         self.pid_x.setpoint = iw * land_pos[0]
