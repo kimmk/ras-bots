@@ -237,11 +237,46 @@ bridge = CvBridge()
 class UsbCamTest:
     def __init__(self):
         rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_callback)
+        #rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_led_calibration)
         self.debug_img = rospy.Publisher("/debug_img", Image, queue_size=10)
+        self.led_img = rospy.Publisher("/led_img", Image, queue_size=10)
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.lander = Lander()
         self.led_a = [[0, 80, 150], [15, 255, 255]]
         self.led_b = [[115, 100, 200], [125, 255, 255]]
+
+    def usb_cam_led_calibration(self, msg):
+        img = bridge.imgmsg_to_cv2(msg, "bgr8")
+        img = imutils.resize(img, width=300)
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # Get HSV-pixels from inside a circle in the middle of the image
+        h, w, _ = img.shape
+        r = int(w * 0.11)
+        r2 = r**2
+        x0, y0 = w // 2, h // 2
+        hue, sat, val = [], [], []
+        for x in range(0, w):
+            for y in range(0, h):
+                if (x-x0)**2+(y-y0)**2 < r2:
+                    p = img_hsv[x][y]
+                    hue.append(p[0])
+                    sat.append(p[1])
+                    val.append(p[2])
+
+        # Get mean and standard dev for hue, saturation, value
+        hue_mean = int(np.mean(hue))
+        hue_std = int(np.std(hue))
+        print("hue: mean {}, std {}".format(hue_mean, hue_std))
+        sat_mean = int(np.mean(sat))
+        sat_std = int(np.std(sat))
+        print("sat: mean {}, std {}".format(sat_mean, sat_std))
+        val_mean = int(np.mean(val))
+        val_std = int(np.std(val))
+        print("val: mean {}, std {}\n".format(val_mean, val_std))
+
+        cv2.circle(img, (x0, y0), r, (255, 255, 80), 2)
+        self.led_img.publish(bridge.cv2_to_imgmsg(img))
 
     def usb_cam_callback(self, msg):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
