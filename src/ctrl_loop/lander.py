@@ -283,7 +283,8 @@ class UsbCamTest:
         print("sat: mean {}, std {}".format(sat_mean, sat_std))
         val_mean = int(np.mean(val))
         val_std = int(np.std(val))
-        print("val: mean {}, std {}\n".format(val_mean, val_std))
+        print("val: mean {}, std {}".format(val_mean, val_std))
+        print("filter: [[{},{},{}],[{},{},{}]]\n".format(hue_mean-hue_std,sat_mean-sat_std,val_mean-val_std,hue_mean+hue_std,sat_mean+sat_std,val_mean+val_std))
 
         cv2.circle(img, (x0, y0), r, (255, 255, 80), 2)
         self.led_img.publish(bridge.cv2_to_imgmsg(img))
