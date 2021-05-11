@@ -149,12 +149,12 @@ class Lander(object):
     #in: camera image (HSV)
     #out: image with only moved areas filtered to show
     #needs set: self.background_img
-    def deriv_filter(self, img):
+    def deriv_filter(self, img, min_delta=40):
         img_channels = cv2.split(img)
         gray = img_channels[2]
 
         frameDelta = cv2.absdiff(self.background_img, gray)
-        drone_area = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
+        drone_area = cv2.threshold(frameDelta, min_delta, 255, cv2.THRESH_BINARY)[1]
 
         # could use contour and boundingbox to create a well defined area to look for leds
         #cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
