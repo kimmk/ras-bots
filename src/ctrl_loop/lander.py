@@ -82,8 +82,6 @@ class Lander(object):
 
         #filter only moving areas
         img = self.deriv_filter(img)
-        if debug_img is not None:
-            debug_img = self.deriv_filter(debug_img)
 
         # Find LED candidate positions
         leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
