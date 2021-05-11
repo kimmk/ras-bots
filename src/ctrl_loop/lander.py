@@ -267,7 +267,7 @@ class UsbCamTest:
         for x in range(0, w):
             for y in range(0, h):
                 if (x-x0)**2+(y-y0)**2 < r2:
-                    p = img_hsv[x][y]
+                    p = img_hsv[y][x]
                     hue.append(p[0])
                     sat.append(p[1])
                     val.append(p[2])
