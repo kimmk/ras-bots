@@ -231,7 +231,9 @@ import controls
 
 bridge = CvBridge()
 
-
+# Using USB camera in ROS:
+# $ apt install ros-melodic-usb-cam 
+# $ rosrun usb_cam usb_cam_node
 class UsbCamTest:
     def __init__(self):
         rospy.Subscriber("/usb_cam/image_raw", Image, self.usb_cam_callback)
