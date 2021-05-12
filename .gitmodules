@@ -3,7 +3,7 @@
 [submodule "jetbot_open_proj/hector_slam"]
 	path = jetbot_open_proj/hector_slam
 	url = https://github.com/gabitzu-p/hector_slam.git
-	branch = melodic-devel
+	branch = noetic-devel
 [submodule "jetbot_open_proj/rf2o_laser_odometry"]
 	path = jetbot_open_proj/rf2o_laser_odometry
 	url = https://github.com/gabitzu-p/rf2o_laser_odometry
