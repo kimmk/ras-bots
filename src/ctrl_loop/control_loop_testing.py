@@ -47,8 +47,8 @@ class ControlState:
         
         
     def reset_metronome(self):
-        self.metronome_sweepsize=5
-        self.metronome = self.metronome_sweepsize 
+        self.metronome_sweepsize=7
+        self.metronome = 0
         self.metronomedir = 1
         self.anglediff = 0
         
@@ -152,17 +152,26 @@ class ControlState:
     
     
     def search(self):
-        self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.5 ))
+        self.cmd_pub.publish(controls.control(az = np.sign(self.metronomedir)*0.5 ))
         time.sleep(0.3)
         
         self.metronome += self.metronomedir
-        self.anglediff += self.metronomedir
-        
-        print("angle,metronome", self.anglediff, self.metronome)
+        print("metronome, dir", self.metronome, self.metronomedir)
         
         if abs(self.metronome) > self.metronome_sweepsize:
             self.metronomedir = -self.metronomedir
             self.metronome_sweepsize +=1
+            
+        if self.metronome == 0 and self.metronomedir == 1:
+            self.cmd_pub.publish(controls.control(y=0.8))
+            time.sleep(1)
+            print("go forward")
+        """
+        self.anglediff += self.metronomedir
+        
+        print("angle,metronome", self.anglediff, self.metronome)
+        
+        
             
         if self.anglediff == 0 and self.metronome_sweepsize > 5:
             self.cmd_pub.publish(controls.control(y=0.8))
@@ -173,7 +182,7 @@ class ControlState:
         
         if abs(self.metronome_sweepsize) > 10:
             handle_exit(None,None)
-    
+        #"""
     
     def camera_callback(self, img):
         cv2_img = bridge.imgmsg_to_cv2(img, "bgr8")

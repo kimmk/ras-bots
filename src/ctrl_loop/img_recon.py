@@ -95,7 +95,7 @@ class GateDetector:
         self.gate_img = rospy.Publisher("gate_img", Image, queue_size=1) # Debug image of gate vision
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
         self.bw_img_pub = rospy.Publisher("bw_img", Image, queue_size=1) # Debug image of gate vision
-        self.kerneldim_init = 17
+        self.kerneldim_init = 19
         self.largest_element = 0
         
         #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right

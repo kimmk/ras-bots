@@ -170,7 +170,7 @@ class droneDetector:
         drone_img = thresh
         #self.filter_drones(img)
         print("drone")
-        self.imshow_bgr(drone_img)
+        self.imshow_bgr(thresh)
         
         # Get drone contours
         cnts = cv2.findContours(drone_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
