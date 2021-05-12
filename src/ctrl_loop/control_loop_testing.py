@@ -22,6 +22,8 @@ decisionGo = 2
 votecount = 6
 bridge = CvBridge()
 sloperun = 0
+use_sqrt_for_motion = 0
+
 
 
 class ControlState:
@@ -34,7 +36,10 @@ class ControlState:
         self.lastGate = [0,0,(0,0)]
         self.target_dist = 0.7
         
-        self.justWentTrough = 0 
+        self.justWentTrough = 0
+
+        self.wait_before_go = 1 ##seconds
+        self.wait_timer = 0
         self.reset_metronome()
         
         self.lastdecision = decisionNone
@@ -42,7 +47,7 @@ class ControlState:
         
         
     def reset_metronome(self):
-        self.metronome_sweepsize=4
+        self.metronome_sweepsize=5
         self.metronome = self.metronome_sweepsize 
         self.metronomedir = 1
         self.anglediff = 0
@@ -91,7 +96,7 @@ class ControlState:
         control_multiple = 1.5
         
         gate_x = gate_x*control_multiple
-        gate_z = gate_z*control_multiple
+        gate_z = gate_z*control_multiple*2
         gate_x = np.sign(gate_x)*min(abs(gate_x), 0.3)
         gate_z = np.sign(gate_z)*min(abs(gate_z), 0.3)
         
@@ -99,6 +104,14 @@ class ControlState:
         sz += -gate_z
         sx = min(gate_dist - self.target_dist, 0.2) #max speed =1
         sx = sx*control_multiple
+
+        if use_sqrt_for_motion:
+            sqrt_cali = 10.0
+            #sx = np.sign(sx)*np.sqrt(abs(sx)/sqrt_cali)
+            sy = np.sign(sy)*np.sqrt(abs(sy)/sqrt_cali)
+            sz = np.sign(sz)*np.sqrt(abs(sz)/sqrt_cali)
+            #saz = np.sign(saz)*np.sqrt(abs(saz)/sqrt_cali)
+
         self.cmd_pub.publish(controls.control(y = sx, x = sy, z = sz, az = saz))
         #self.cmd_pub.publish(controls.control(az = 1))
         #time.sleep(0.5)
@@ -114,7 +127,7 @@ class ControlState:
         for i in range(5):
             print("GO")
         self.cmd_pub.publish(controls.hold())
-        time.sleep(0.3)
+        time.sleep(0.2)
         
         self.cmd_pub.publish(controls.control(y=sx/4, z = -sz/4))
         time.sleep(0.5)
@@ -128,7 +141,7 @@ class ControlState:
         self.cmd_pub.publish(controls.control(y=-stop))
         time.sleep(1)
         self.cmd_pub.publish(controls.control(z = sz))
-        time.sleep(1)
+        time.sleep(1.5)
         self.cmd_pub.publish(controls.hold())
         time.sleep(1)
         self.reset_metronome()
@@ -140,7 +153,7 @@ class ControlState:
     
     def search(self):
         self.cmd_pub.publish(controls.control(az = np.sign(self.metronome)*0.5 ))
-        time.sleep(0.2)
+        time.sleep(0.3)
         
         self.metronome += self.metronomedir
         self.anglediff += self.metronomedir
@@ -158,7 +171,7 @@ class ControlState:
                 time.sleep(3)
             print("go forward")
         
-        if abs(self.metronome_sweepsize) > 8:
+        if abs(self.metronome_sweepsize) > 10:
             handle_exit(None,None)
     
     
@@ -213,15 +226,21 @@ class ControlState:
             
             self.search()
             self.justWentTrough = 0
-            
-            ##this is the part where we pretend that we know what we are doing
+            self.wait_timer = 0
         elif decision == decisionCorrection:
             self.move_around_gate(angle,dist,x,y)
             self.justWentTrough = 0
+            self.wait_timer = 0
         else:
             if not self.justWentTrough:
-                self.justWentTrough = 1
-                foo = self.go_trough_gate()
+                if not self.wait_timer:
+                    self.wait_timer = time.time()
+
+                if time.time()-self.wait_timer < self.wait_before_go:
+                    self.move_around_gate(angle, dist, x, y)
+                else:
+                    self.justWentTrough = 1
+                    foo = self.go_trough_gate()
         #"""
 def handle_exit(signum, frame):
 #def handle_exit():

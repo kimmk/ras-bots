@@ -95,7 +95,7 @@ class GateDetector:
         self.gate_img = rospy.Publisher("gate_img", Image, queue_size=1) # Debug image of gate vision
         self.gate_pose = rospy.Publisher("gate_pose", Pose, queue_size=1) # Estimated pose of gate
         self.bw_img_pub = rospy.Publisher("bw_img", Image, queue_size=1) # Debug image of gate vision
-        self.kerneldim_init = 13
+        self.kerneldim_init = 17
         self.largest_element = 0
         
         #offset corrections in case gate is not recognised centrally, in px, + moves gate in image right
@@ -314,7 +314,7 @@ class GateDetector:
             if box_sz > boxlimit:
                 epsilon = 0.03*cv2.arcLength(points,closed = True)
                 approx = cv2.approxPolyDP(points,epsilon,closed = True)
-                if len(approx) >=4 and len(approx) <=8:
+                if len(approx) >=4 and len(approx) <=7:
                     candidates.append((approx, box_sz))
                 
                 if debug_img is not None:
