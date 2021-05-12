@@ -64,10 +64,12 @@ class Lander(object):
         for points in im_cnts:
             led_box = cv2.boundingRect(points)
             x, y, w, h = led_box
-            if w * h > 20:
+            c = (0, 0, 255)
+            if w * h > 4:
+                c = (255, 0, 0)
                 leds.append(led_box)
-                if debug_img is not None:
-                    cv2.rectangle(debug_img, (x, y), (x + w, y + h), (255, 0, 255), 2)
+            if debug_img is not None:
+                cv2.rectangle(debug_img, (x, y), (x + w, y + h), c, 2)
 
         # Sort by size
         leds.sort(key=lambda box: box[2] * box[3], reverse=True)
@@ -126,9 +128,9 @@ class Lander(object):
         if debug_img is not None:
             dh, dw, _ = debug_img.shape
             cv2.circle(debug_img, (int(self.pid_x.setpoint), int(self.pid_y.setpoint)), 5, (80, 255, 255), 2)
-            cv2.circle(debug_img, (x, y), 5, (255, 255, 80), 2)
-            cv2.circle(debug_img, a_pos, 3, (0, 255, 0), -1)
-            cv2.circle(debug_img, b_pos, 3, (255, 0, 0), -1)
+            cv2.circle(debug_img, (x, y), dw//80, (255, 255, 80), 2)
+            cv2.circle(debug_img, a_pos, dw//80, (0, 255, 0), -1)
+            cv2.circle(debug_img, b_pos, dw//80, (255, 0, 0), -1)
             cv2.putText(debug_img,
                         "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x) / iw, float(y) / ih, h, np.rad2deg(a)),
                         (dw * 1 / 8, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
