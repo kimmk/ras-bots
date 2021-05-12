@@ -76,20 +76,19 @@ class Lander(object):
 
         return leds
 
+    # Finds candidates for leds A and B from image and returns approx craft position.
     # img:              landing camera image in cv2 HSV format
     # led_a, led_b:     HSV color ranges for front led (led_a) and back led (led_b)
-    # land_pos:         target landing position in image, in percentages of X and Y
     # debug_img:        debug image in BGR8 format. if set, debug info will be drawn to this image
-    def land_update(self, img, led_a, led_b, land_pos=(0.5, 0.5), debug_img=None):
-
-        #filter only moving areas
-        img = self.deriv_filter(img)
+    # returns:          None if no leds were found OR
+    #                   Craft position (x, y, a, h)
+    def find_craft_leds(self, img, led_a, led_b, debug_img=None):
 
         # Find LED candidate positions
         leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
         leds_b = self.find_leds(img, led_b[0], led_b[1], debug_img)
         if len(leds_a) == 0 or len(leds_b) == 0:
-            return [0, 0]
+            return None
 
         # Right now, just pick the largest leds. Maybe could do some fancy size matching here?
         a_box = leds_a[0]
@@ -106,7 +105,24 @@ class Lander(object):
         h = 1.0 / ab_dist
         a = ((angle_between(a_pos, b_pos) + np.pi * 1.5) % (np.pi * 2)) - np.pi
 
+        # Debug drawing
+        if debug_img is not None:
+            cv2.circle(debug_img, a_pos, dw//80, (0, 255, 0), -1)
+            cv2.circle(debug_img, b_pos, dw//80, (255, 0, 0), -1)
+
+        return (x, y, a, h)
+
+    # Calculates new velocity vector for craft according to input parameters.
+    # img:              landing camera image in cv2 HSV format
+    # x, y:             craft position in image
+    # a:                craft angle
+    # land_pos:         target landing position in image, in percentages of image width and height
+    # debug_img:        debug image in BGR8 format. if set, debug info will be drawn to this image
+    # returns:          new craft velocity (vel_x, vel_y)
+    def land_update(self, img, x, y, a, h, land_pos=(0.5, 0.5), debug_img=None):
+
         # Calculate initial velocity vector
+        ih, iw, _ = img.shape
         self.pid_x.setpoint = iw * land_pos[0]
         self.pid_y.setpoint = ih * land_pos[1]
 
@@ -129,8 +145,6 @@ class Lander(object):
             dh, dw, _ = debug_img.shape
             cv2.circle(debug_img, (int(self.pid_x.setpoint), int(self.pid_y.setpoint)), 5, (80, 255, 255), 2)
             cv2.circle(debug_img, (x, y), dw//80, (255, 255, 80), 2)
-            cv2.circle(debug_img, a_pos, dw//80, (0, 255, 0), -1)
-            cv2.circle(debug_img, b_pos, dw//80, (255, 0, 0), -1)
             cv2.putText(debug_img,
                         "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x) / iw, float(y) / ih, h, np.rad2deg(a)),
                         (dw * 1 / 8, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
@@ -149,7 +163,7 @@ class Lander(object):
 
     #filter based on change to background image
     #in: camera image (HSV)
-    #out: image with only moved areas filtered to show
+    #out: background filter mask
     #needs set: self.background_img
     def deriv_filter(self, img, min_delta=40):
         img_channels = cv2.split(img)
@@ -157,12 +171,7 @@ class Lander(object):
 
         frameDelta = cv2.absdiff(self.background_img, gray)
         drone_area = cv2.threshold(frameDelta, min_delta, 255, cv2.THRESH_BINARY)[1]
-
-        # could use contour and boundingbox to create a well defined area to look for leds
-        #cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        drone_img = cv2.bitwise_and(img, img, mask=drone_area)
-        return drone_img
+        return drone_area
 
     # land the drone, and when landed take an image, this is now the empty background
     # in: camera image (HSV)
@@ -291,15 +300,28 @@ class UsbCamTest:
 
     def usb_cam_callback(self, msg):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
-        img = imutils.resize(img, width=300)
+        img = imutils.resize(img, width=450)
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         if not self.lander.init_background(img_hsv):
             return
 
-        vel = self.lander.land_update(img_hsv, self.led_a, self.led_b, debug_img=img)
-        #print(vel)
-        self.bg_img.publish(bridge.cv2_to_imgmsg(self.lander.background_img))
+        # Filter background
+        dfilter = self.lander.deriv_filter(img)
+        img_hsv = cv2.bitwise_and(img_hsv, img_hsv, mask=dfilter)
+
+        # Find craft position
+        craft_pos = self.lander.find_craft_leds(img_hsv, self.led_a, self.led_b, debug_img=img)
+
+        # Update craft velocity
+        vel = [0,0]
+        if craft_pos is not None:
+            x, y, a, h = craft_pos
+            vel = self.lander.land_update(img_hsv, x, y, a, h, debug_img=img)
+
+        print(vel)
+
+        self.bg_img.publish(bridge.cv2_to_imgmsg(dfilter))
         self.debug_img.publish(bridge.cv2_to_imgmsg(img))
 
 def test_usb_cam():
