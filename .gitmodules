@@ -1,5 +1,3 @@
-[submodule "src/tello-driver-ros"]
-	url = https://github.com/TIERS/tello-driver-ros.git
 [submodule "jetbot_open_proj/hector_slam"]
 	path = jetbot_open_proj/hector_slam
 	url = https://github.com/gabitzu-p/hector_slam.git
@@ -8,3 +6,6 @@
 	path = jetbot_open_proj/rf2o_laser_odometry
 	url = https://github.com/gabitzu-p/rf2o_laser_odometry
 	branch = devel
+[submodule "src/tello-driver-ros"]
+	path = src/tello-driver-ros
+	url = https://github.com/TIERS/tello-driver-ros.git
