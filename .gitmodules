@@ -1,2 +1,6 @@
 [submodule "src/tello-driver-ros"]
 	url = https://github.com/TIERS/tello-driver-ros.git
+[submodule "jetbot_open_proj/hector_slam"]
+	path = jetbot_open_proj/hector_slam
+	url = https://github.com/gabitzu-p/hector_slam.git
+	branch = melodic-devel
