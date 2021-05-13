@@ -112,6 +112,52 @@ class Lander(object):
 
         return (x, y, a, h)
 
+    def find_craft(self, img, debug_img=None):
+        img = cv2.split(img)[2]
+        img = cv2.medianBlur(img, ksize=5) # Remove background noise
+        #k0 = np.array([[0,1,0], [1,1,1], [0,1,0]], dtype=np.uint8)
+        #img = cv2.erode(img, k0, iterations=3)
+        #k1 = np.array([[1,1,1,1,1], [1,1,1,1,1], [1,1,1,1,1]], dtype=np.uint8)
+        #img = cv2.dilate(img, k1, iterations=1)
+        img = cv2.threshold(img, 10, 255, cv2.THRESH_BINARY)[1]
+
+        cnts = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        im_cnts = imutils.grab_contours(cnts)
+
+        # Select largest contour by it's bounding box
+        cnt = None
+        bbox = None
+        largest_box = 0
+        for points in im_cnts:
+            x,y,w,h = cv2.boundingRect(points)
+            box_sz = w*h
+            if debug_img is not None:
+                cv2.rectangle(debug_img, (x,y), (x+w,y+h), (0,0,255), 2)
+            if box_sz > largest_box:
+                largest_box = box_sz
+                bbox = (x,y,w,h)
+                cnt = points
+
+        if bbox is not None:
+            crop = np.zeros(img.shape, dtype=np.uint8)
+            x,y,w,h = bbox
+            crop[y:y+h, x:x+w] = 255
+            img = cv2.bitwise_and(img, img, mask=crop)
+
+        if cnt is not None:
+            epsilon = cv2.arcLength(cnt,closed=True) * 0.02
+            approx = cv2.approxPolyDP(cnt,epsilon,closed=True)
+            sides = len(approx)
+            if debug_img is not None:
+                cv2.drawContours(debug_img,[approx],0,(255,0,0),2)
+                cv2.putText(debug_img, "{}".format(sides), (bbox[0],bbox[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+                
+        # Debug drawing
+        if debug_img is not None:
+            cv2.drawContours(debug_img, im_cnts, -1, (0, 255, 0), 2)
+
+        return None, img
+
     # Calculates new velocity vector for craft according to input parameters.
     # img:              landing camera image in cv2 HSV format
     # x, y:             craft position in image
@@ -179,7 +225,7 @@ class Lander(object):
     #     1 if background set
     # set: self.background_img for further use
     def init_background(self, img):
-        secs_to_land = 4
+        secs_to_land = 1
         if self.background_img is not None:
             return 1
         if self.background_init_timer is None:
@@ -307,11 +353,12 @@ class UsbCamTest:
             return
 
         # Filter background
-        dfilter = self.lander.deriv_filter(img)
+        dfilter = self.lander.deriv_filter(img, 35)
         img_hsv = cv2.bitwise_and(img_hsv, img_hsv, mask=dfilter)
 
         # Find craft position
-        craft_pos = self.lander.find_craft_leds(img_hsv, self.led_a, self.led_b, debug_img=img)
+        #craft_pos = self.lander.find_craft_leds(img_hsv, self.led_a, self.led_b, debug_img=img)
+        craft_pos, img_craft = self.lander.find_craft(img_hsv, debug_img=img)
 
         # Update craft velocity
         vel = [0,0]
@@ -322,6 +369,7 @@ class UsbCamTest:
         print(vel)
 
         self.bg_img.publish(bridge.cv2_to_imgmsg(dfilter))
+        self.led_img.publish(bridge.cv2_to_imgmsg(img_craft))
         self.debug_img.publish(bridge.cv2_to_imgmsg(img))
 
 def test_usb_cam():
