@@ -29,27 +29,38 @@ def angle_between(p1, p2):
 def rot_vel(vel, a):
     c, s = np.cos(a), np.sin(a)
     R = np.array(((c, -s), (s, c)))
-    return np.dot(vel, R)
+    return np.dot(R, vel)
 
 
 class Lander(object):
     def __init__(self):
-        self.pid_x = PID(10.0, 0, 3.0)
-        self.pid_y = PID(10.0, 0, 3.0)
+        self.pid_x = PID(1.0, 0, 1.0)
+        self.pid_y = PID(1.0, 0, 1.0)
 
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
         self.cmd_takeoff = rospy.Publisher('/tello/takeoff', Empty, queue_size=1)
         self.reset_background()
+        
+        self.debug_img = rospy.Publisher("/color_filter", Image, queue_size=10)
+        
+        self.backSub = cv2.createBackgroundSubtractorMOG2()
+        self.craft_entry_angle = None
 
-    def find_leds(self, img, hsv_min, hsv_max, debug_img=None):
+    def find_leds(self, img, hsv1_min, hsv1_max, hsv2_min = None, hsv2_max = None, debug_img=None):
 
         # Filter LED color only
-        lower = np.array(hsv_min, dtype="uint8")
-        upper = np.array(hsv_max, dtype="uint8")
-        mask = cv2.inRange(img, lower, upper)
+        lower1 = np.array(hsv1_min, dtype="uint8")
+        upper1 = np.array(hsv1_max, dtype="uint8")
+        mask = cv2.inRange(img, lower1, upper1)
+        if hsv2_min is not None and hsv2_max is not None:
+            lower2 = np.array(hsv1_min, dtype="uint8")
+            upper2 = np.array(hsv1_max, dtype="uint8")
+            mask2 = cv2.inRange(img, lower2, upper2)
+            mask = mask + mask2
+            
         img_masked = cv2.bitwise_and(img, img, mask=mask)
-
+        self.debug_img.publish(bridge.cv2_to_imgmsg(img_masked))
         # Take grayscale, apply blur and threshold
         gray = cv2.split(img_masked)[2]
         blurred = cv2.medianBlur(gray, ksize=5)
@@ -82,11 +93,12 @@ class Lander(object):
     # debug_img:        debug image in BGR8 format. if set, debug info will be drawn to this image
     # returns:          None if no leds were found OR
     #                   Craft position (x, y, a, h)
-    def find_craft_leds(self, img, led_a, led_b, debug_img=None):
+    def find_craft_leds(self, img, led_blue, led_red_lower, led_red_higher, debug_img=None):
 
         # Find LED candidate positions
-        leds_a = self.find_leds(img, led_a[0], led_a[1], debug_img)
-        leds_b = self.find_leds(img, led_b[0], led_b[1], debug_img)
+        leds_a = self.find_leds(img, led_red_lower[0], led_red_lower[1],led_red_higher[0], led_red_higher[1], debug_img=debug_img)
+        leds_b = []
+        #leds_b = self.find_leds(img, led_blue[0], led_blue[1], debug_img=debug_img)
         if len(leds_a) == 0 or len(leds_b) == 0:
             return None
 
@@ -107,10 +119,50 @@ class Lander(object):
 
         # Debug drawing
         if debug_img is not None:
-            cv2.circle(debug_img, a_pos, dw//80, (0, 255, 0), -1)
-            cv2.circle(debug_img, b_pos, dw//80, (255, 0, 0), -1)
+            cv2.circle(debug_img, a_pos, iw//80, (0, 255, 0), -1)
+            cv2.circle(debug_img, b_pos, iw//80, (255, 0, 0), -1)
 
         return (x, y, a, h)
+
+    #find frame center just from the filtered image
+    #in: filtered image
+    #out: x,y of biggest contour center
+    def find_craft_frame(self, img, debug_img = None):
+        #img = cv2.medianBlur(img, ksize=3)
+        img = cv2.boxFilter(img, -1, ksize=(5,5), normalize = False)
+        img = cv2.erode(img, kernel= cv2.getStructuringElement(shape = cv2.MORPH_RECT, ksize=(5,5)))
+        self.debug_img.publish(bridge.cv2_to_imgmsg(img))
+        cnts = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        im_cnts = imutils.grab_contours(cnts)
+        if len(im_cnts)==0:
+            return None
+        # find the biggest countour (c) by the area
+        c = max(im_cnts, key=cv2.contourArea)
+
+        x, y, w, h = cv2.boundingRect(c)
+        if w < 10 or h < 10:
+            return None
+        center_x, center_y = x+w/2, y+h/2
+        if debug_img is not None:
+            # draw the biggest contour (c) in green
+            cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0 , 255, 0), 2)
+            cv2.rectangle(debug_img, (center_x-1, center_y-1), (center_x+1, center_y+1), (0, 255, 0), 2)
+
+        if self.craft_entry_angle is None:
+
+            ih, iw= img.shape
+            entry_x, entry_y = center_x-iw/2, center_y-ih/2
+            self.craft_entry_angle = np.arctan2(entry_y, -entry_x)
+
+
+        #approximate height by contour size
+        z = 100.0/w
+
+
+
+
+        return center_x,center_y, self.craft_entry_angle, z
 
     # Calculates new velocity vector for craft according to input parameters.
     # img:              landing camera image in cv2 HSV format
@@ -123,12 +175,13 @@ class Lander(object):
 
         # Calculate initial velocity vector
         ih, iw, _ = img.shape
+
         self.pid_x.setpoint = iw * land_pos[0]
         self.pid_y.setpoint = ih * land_pos[1]
 
         dx = self.pid_x(x)
         dy = self.pid_y(y)
-        v = np.array([dx, dy])
+        v = np.array([-dy,dx])
 
         # Normalize velocity vector
         norm = np.linalg.norm(v)
@@ -143,20 +196,26 @@ class Lander(object):
         # Debug drawing
         if debug_img is not None:
             dh, dw, _ = debug_img.shape
+            #draw center and drone pos
             cv2.circle(debug_img, (int(self.pid_x.setpoint), int(self.pid_y.setpoint)), 5, (80, 255, 255), 2)
             cv2.circle(debug_img, (x, y), dw//80, (255, 255, 80), 2)
             cv2.putText(debug_img,
-                        "xy: {:.2f} {:.2f} h: {:.2f} a: {:.2f}".format(float(x) / iw, float(y) / ih, h, np.rad2deg(a)),
-                        (dw * 1 / 8, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-            cv2.putText(debug_img, "vel: {:.2f} {:.2f}".format(vr[0], vr[1]), (dw * 1 / 8, dh * 2 / 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                        "xy: {:.2f} {:.2f}".format(float(x) / iw, float(y) / ih),
+                        (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+            cv2.putText(debug_img, "h: {:.2f} a: {:.2f}".format(h, np.rad2deg(a)),
+                        (dw * 1 / 10, dh * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+
+            cv2.putText(debug_img, "vel: {:.2f} {:.2f}".format(vr[0], vr[1]),
+                        (dw * 1 / 10, dh * 9 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+
             fva = (dw // 2, dh * 4 // 5)
-            fvb = (fva[0] + int(vr[0] * 10), fva[1] + int(vr[1] * 10))
+            fvb = (fva[0] + int(vr[0] * 20), fva[1] + int(-vr[1] * 20))
             cv2.line(debug_img, fva, fvb, (255, 255, 0), 2)
             cv2.circle(debug_img, fva, 2, (255, 255, 255), -1)
+            cv2.line(debug_img, fva, (fva[0],fva[1]-15), (0,0,255), 1)
             fva = (x, y)
             rot = rot_vel([20, 0], a)
-            fvb = (x + int(rot[0]), y + int(rot[1]))
+            fvb = (x + int(rot[0]), y - int(rot[1]))
             cv2.line(debug_img, fva, fvb, (255, 255, 255), 2)
 
         return [vr[0], vr[1]]
@@ -171,6 +230,7 @@ class Lander(object):
 
         frameDelta = cv2.absdiff(self.background_img, gray)
         drone_area = cv2.threshold(frameDelta, min_delta, 255, cv2.THRESH_BINARY)[1]
+        #fgMask = self.backSub.apply(img)
         return drone_area
 
     # land the drone, and when landed take an image, this is now the empty background
@@ -192,6 +252,8 @@ class Lander(object):
         #store as grayscale (HSV V channel)
         img_channels = cv2.split(img)
         self.background_img = img_channels[2]
+        self.takeoff()
+        time.sleep(2)
         print("bg image ready")
         return 1
 
@@ -200,6 +262,8 @@ class Lander(object):
         self.background_init_timer = None
 
     def land(self):
+        self.cmd_vel.publish(controls.hold())
+        time.sleep(0.2)
         self.cmd_land.publish(Empty())
         self.cmd_vel.publish(controls.hold())
 
