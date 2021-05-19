@@ -101,6 +101,7 @@ def drone_camera_callback(msg):
 
 if __name__ == '__main__':
     rospy.init_node('platform_detection_run')
+    signal.signal(signal.SIGINT, handle_exit)
     import platform_detector
     # Instantiate CvBridge
     bridge = CvBridge()
@@ -108,6 +109,6 @@ if __name__ == '__main__':
     platform_run = fly_to_platform()
     rospy.Subscriber("/image", Image, drone_camera_callback)
 
-    signal.signal(signal.SIGINT, handle_exit)
+
 
     rospy.spin()

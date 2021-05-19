@@ -209,7 +209,7 @@ class platformDetector:
                     "platform_pos_pxl: {:.2f} {:.2f}".format(platform_center[0], platform_center[1]),
                     (dw * 1 / 10, dh * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
                 cv2.putText(img,
-                    "platform_pos_transform: {:.2f} {:.2f}".format((platform_center[0]-(iw/2.0))/(iw/2.0), (platform_center[1] - (ih / 2.0)) / (ih / 2.0)),
+                    "platform_pos_transform: {:.2f} {:.2f}".format((platform_center[0]-(dw/2.0))/(dw/2.0), (platform_center[1] - (dh / 2.0)) / (dh / 2.0)),
                     (dw * 1 / 10, dh * 3 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
         if len(approx) == 2:
             #print("idx==none" + str(platform_idx))
