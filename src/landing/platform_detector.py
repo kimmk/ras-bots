@@ -201,6 +201,10 @@ class platformDetector:
                 approx = cv2.approxPolyDP(points, 0.07 * perimeter, closed=True)
 
                 cv2.drawContours(img, [approx], 0, (0, 255, 0), 2)
+                dh, dw, _ = img.shape
+                cv2.putText(img,
+                        "platform_size: {:.2f}".format(biggest_box),
+                        (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
         if len(approx) == 2:
             #print("idx==none" + str(platform_idx))
             self.platform_img.publish(bridge.cv2_to_imgmsg(img))
