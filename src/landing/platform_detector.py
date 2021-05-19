@@ -203,8 +203,14 @@ class platformDetector:
                 cv2.drawContours(img, [approx], 0, (0, 255, 0), 2)
                 dh, dw, _ = img.shape
                 cv2.putText(img,
-                        "platform_size: {:.2f}".format(biggest_box),
-                        (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                    "platform_size: {:.2f}".format(biggest_box),
+                    (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                cv2.putText(img,
+                    "platform_pos_pxl: {:.2f} {:.2f}".format(platform_center[0], platform_center[1]),
+                    (dw * 1 / 10, dh * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                cv2.putText(img,
+                    "platform_pos_transform: {:.2f} {:.2f}".format((platform_center[0]-(iw/2.0))/(iw/2.0), (platform_center[1] - (ih / 2.0)) / (ih / 2.0)),
+                    (dw * 1 / 10, dh * 3 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
         if len(approx) == 2:
             #print("idx==none" + str(platform_idx))
             self.platform_img.publish(bridge.cv2_to_imgmsg(img))
