@@ -44,18 +44,34 @@ class fly_to_platform:
     def align_to_platform(self, platform_pos):
         self.searctime = None
         platform_x, platform_y, platform_size = platform_pos
-        saz = platform_x/2.0
-        sz = -platform_y/2.0
+
 
         # if size small go down, if y is offset then forward or backwards, if x is offset then rotate
         #if size small but platform is relatively centered, fly forward
         #if size small and platform is below threshold, fly down
 
-        self.cmd_pub.publish(controls.control(az=saz, z = sz))
-        
-        if abs(platform_x) < 0.1 and abs(platform_y) < 0.3:
+        # this is when x is not aligned
+        if abs(platform_x) < 0.1 and abs(platform_y) < 0.3 and platform_size > 1000 and platform_size < 2000:
             self.cmd_pub.publish(controls.hold())
             return 1
+        else if abs(platform_x) > 0.1:
+            saz = platform_x/2.0
+            sz = -platform_y/2.0
+            self.cmd_pub.publish(controls.control(az=saz, z = sz))
+            return 0
+        else if abs(platform_y) > 0.3 and platform_size < 1000:
+            sx = 0.3
+            self.cmd_pub.publish(controls.control(y=sx))
+        else if abs(platform_y) > 0.3 and platform_size > 1000:
+            sz = -0.1
+            self.cmd_pub.publish(controls.control(z=sz))
+        else if abs(platform_y) < 0.3 and platform_size < 1000:
+            sz = 0.1
+            sx = 0.3
+            self.cmd_pub.publish(controls.control(y=sx, z=sz))
+        else if abs(platform_y) > 0.3 and platform_size > 1000:
+            sz = -0.1
+            self.cmd_pub.publish(controls.control(z=sz))
         return 0
 
 
