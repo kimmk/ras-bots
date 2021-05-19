@@ -82,7 +82,7 @@ class fly_to_platform:
         if platform_pos is None:
             return 0
         platform_x, platform_y = platform_pos
-        if abs(platform_x) > 0.1:
+        if abs(platform_x) > 0.1 and abs(platform_y) > 0.3 and platform_size > 1000 and platform_size < 2000:
             self.align_to_platform(platform_pos)
             return 0
 
