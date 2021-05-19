@@ -48,7 +48,7 @@ class fly_to_platform:
         sz = -platform_y/2.0
         self.cmd_pub.publish(controls.control(az=saz, z = sz))
 
-        if abs(platform_x) < 0.05 and abs(platform_y) < 0.2:
+        if abs(platform_x) < 0.1 and abs(platform_y) < 0.3:
             self.cmd_pub.publish(controls.hold())
             return 1
         return 0
@@ -61,7 +61,7 @@ class fly_to_platform:
         if platform_pos is None:
             return 0
         platform_x, platform_y = platform_pos
-        if abs(platform_x) > 0.05:
+        if abs(platform_x) > 0.1:
             self.align_to_platform(platform_pos)
             return 0
 

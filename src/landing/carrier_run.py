@@ -53,10 +53,10 @@ class main_control:
 
     def run_start(self):
         time.sleep(1)
-        self.jetbot_move_into_arena()
-        self.drone_search_target()
-        self.drone_target_found()
-        self.jetbot_move_to_target()
+        #self.jetbot_move_into_arena()
+        #self.drone_search_target()
+        #self.drone_target_found()
+        #self.jetbot_move_to_target()
 
         while not self.drone_search_jetbot():
             pass
@@ -92,13 +92,15 @@ class main_control:
         platform_pos = self.platformDetector.give_platform_x(self.drone_image)
         if platform_pos is None:
             if self.start_search_timer is None:
-
-            #print("searching")
-            #self.platform_run.search()
+                self.start_search_timer = time.time()
+            if time.time()- self.start_search_timer > 1:
+                print("searching")
+                self.platform_run.search()
             return 0
             #self.drone_search_jetbot()
             #platform_pos = self.platformDetector.give_platform_x(self.drone_image)
         elif not self.platform_run.align_to_platform(platform_pos):
+            self.start_search_timer = None
             #self.drone_search_jetbot()
             print("aligning")
             return 0
