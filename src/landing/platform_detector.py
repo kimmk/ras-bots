@@ -177,7 +177,7 @@ class platformDetector:
         # Select largest platform feature from image
 
         biggest_box = 0
-        platform_center = [0, 0]
+        platform_center = [0, 0, 0]
         approx = [0, 0]
         for idx, points in enumerate(im_cnts):
             if len(points) < 10:
@@ -186,16 +186,17 @@ class platformDetector:
             x,y,w,h = cv2.boundingRect(points)
             box_sz = w*h
             if debug_mode:
-                cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
-                
-                perimeter = cv2.arcLength(points, closed = True)
-                approx = cv2.approxPolyDP(points, 0.03 * perimeter, closed = True)
-                cv2.drawContours(img,[approx],0,(255,0,0),2)
-                #self.shapedetector(points,img)
-                #self.imshow_bgr(img)
+                if box_sz > biggest_box:
+                    cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
+                    
+                    perimeter = cv2.arcLength(points, closed = True)
+                    approx = cv2.approxPolyDP(points, 0.03 * perimeter, closed = True)
+                    cv2.drawContours(img,[approx],0,(255,0,0),2)
+                    #self.shapedetector(points,img)
+                    #self.imshow_bgr(img)
             if box_sz > biggest_box:
                 biggest_box = box_sz
-                platform_center = [x+w//2,y+h//2]
+                platform_center = [x+w//2,y+h//2, biggest_box]
                 perimeter = cv2.arcLength(points, closed=True)
                 approx = cv2.approxPolyDP(points, 0.07 * perimeter, closed=True)
 
