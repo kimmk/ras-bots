@@ -81,9 +81,9 @@ class LandingTest(object):
             ih, iw, _ = img.shape
             target = (iw*land_pos[0], ih*land_pos[1])
             if abs(x-target[0]) < 0.05*iw and abs(y-target[1] < 0.05*ih):
-                vz = - 0.2*self.landingtimer()
-                print("ontarget")
-                if h < 0.8:
+                vz = - 0.4*self.landingtimer()
+
+                if h < 0.62:
                     self.lander.land()
 
             else:

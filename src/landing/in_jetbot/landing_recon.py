@@ -34,8 +34,11 @@ def rot_vel(vel, a):
 
 class Lander(object):
     def __init__(self):
-        self.pid_x = PID(1.0, 0, 1.0)
-        self.pid_y = PID(1.0, 0, 1.0)
+        P, I, D = 0.8, 0.0, 0.8
+        self.pid_x = PID(P, I, D)
+        self.pid_y = PID(P, I, D)
+        self.pid_x.output_limits = (-0.4, 0.4)
+        self.pid_y.output_limits = (-0.4, 0.4)
 
         self.cmd_vel = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
         self.cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
