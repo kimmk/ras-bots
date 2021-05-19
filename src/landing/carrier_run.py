@@ -127,7 +127,7 @@ class main_control:
         if platform_pos is None:
             while not self.drone_search_jetbot():
                 pass
-        while not self.platform_run.fly_to_platform(platform_pos):
+        while not self.platform_run.fly_over_platform(platform_pos):
             platform_pos = self.platformDetector.give_platform_x(self.drone_image)
             if platform_pos is None:
                 while not self.drone_search_jetbot():
@@ -170,10 +170,12 @@ class main_control:
 def handle_exit(signum, frame):
     cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch=True)
     cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
+    do_landing_pub = rospy.Publisher("/land/execute", Int8, queue_size=1)
     rospy.sleep(1)
     print("set to neutral + landing")
     cmd_land.publish(Empty())
     cmd_pub.publish(controls.hold())
+    do_landing_pub.publish(0)
     rospy.sleep(1)
     sys.exit(0)
 

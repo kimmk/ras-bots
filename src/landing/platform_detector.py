@@ -180,7 +180,7 @@ class platformDetector:
         platform_center = [0, 0, 0]
         approx = [0, 0]
         for idx, points in enumerate(im_cnts):
-            if len(points) < 10:
+            if len(points) < 20:
                 continue
                 
             x,y,w,h = cv2.boundingRect(points)
@@ -197,7 +197,7 @@ class platformDetector:
             if box_sz > biggest_box:
                 biggest_box = box_sz
                 dh, dw, _ = img.shape
-                platform_center = [x+w//2,y+h//2, biggest_box]
+                platform_center = [x+w//2,y+h//2, w]
                 platform_center[0] = (platform_center[0]-(dw/2.0))/(dw/2.0)
                 platform_center[1] = (platform_center[1] - (dh / 2.0)) / (dh / 2.0)
                 perimeter = cv2.arcLength(points, closed=True)
@@ -206,10 +206,10 @@ class platformDetector:
                 cv2.drawContours(img, [approx], 0, (0, 255, 0), 2)
                 
                 cv2.putText(img,
-                    "platform_size: {:.2f}".format(biggest_box),
+                    "platform_size: {:.2f}".format(w),
                     (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
                 cv2.putText(img,
-                    "platform_pos: {:.2f} {:.2f}".format(platform_center[0],(platform_center[1]),
+                    "platform_pos: {:.2f} {:.2f}".format(platform_center[0],platform_center[1]),
                     (dw * 1 / 10, dh * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
         if len(approx) == 2:
             #print("idx==none" + str(platform_idx))

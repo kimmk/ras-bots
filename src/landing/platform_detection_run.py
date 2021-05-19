@@ -35,8 +35,9 @@ class fly_to_platform:
     def search(self):
         if self.searctime is None:
             self.searctime = time.time()
-        if time.time()-self.searctime < 15:
-            self.cmd_pub.publish(controls.control(az = 0.8))
+        if time.time()-self.searctime < 1:
+            pass
+            #self.cmd_pub.publish(controls.control(az = 0.5))
         else:
             self.cmd_pub.publish(controls.control(y = -0.4))
 
@@ -51,38 +52,35 @@ class fly_to_platform:
         #if size small and platform is below threshold, fly down
 
         # this is when x is not aligned
-        if abs(platform_x) < 0.1 and abs(platform_y) < 0.3 and platform_size > 1000 and platform_size < 2000:
-            self.cmd_pub.publish(controls.hold())
+        print("platform_pos: ", platform_pos)
+        sx = 0
+        sz = 0
+        saz = 0
+
+
+        saz = platform_x/2.0
+
+        #if platform_size < 1500:
+        #    if abs(platform_y) > 0.8:
+        sz = 1.0*(platform_size-70)/70.0
+        #    elif abs(platform_y) < 0.7:
+        #        sx = 0.5
+        sx = 1.0*(-1)*(platform_y - 0.7)
+        self.cmd_pub.publish(controls.control(az=saz, y=sx, z=sz))
+        if abs(platform_x) < 0.1 and abs(platform_y) < 0.8 and abs(platform_y) > 0.6 and platform_size > 60 and platform_size < 80:
+            #self.cmd_pub.publish(controls.hold())
             return 1
-        else if abs(platform_x) > 0.1:
-            saz = platform_x/2.0
-            sz = -platform_y/2.0
-            self.cmd_pub.publish(controls.control(az=saz, z = sz))
-            return 0
-        else if abs(platform_y) > 0.3 and platform_size < 1000:
-            sx = 0.3
-            self.cmd_pub.publish(controls.control(y=sx))
-        else if abs(platform_y) > 0.3 and platform_size > 1000:
-            sz = -0.1
-            self.cmd_pub.publish(controls.control(z=sz))
-        else if abs(platform_y) < 0.3 and platform_size < 1000:
-            sz = 0.1
-            sx = 0.3
-            self.cmd_pub.publish(controls.control(y=sx, z=sz))
-        else if abs(platform_y) > 0.3 and platform_size > 1000:
-            sz = -0.1
-            self.cmd_pub.publish(controls.control(z=sz))
         return 0
 
 
     #### platform_x = % of platform-x center off of image center
     #### return 1 if flying towards, 0 if still aligning
-    def fly_to_platform(self, platform_pos):
+    def fly_over_platform(self, platform_pos):
+        platform_x, platform_y, platform_size = platform_pos
         self.searctime = None
         if platform_pos is None:
             return 0
-        platform_x, platform_y = platform_pos
-        if abs(platform_x) > 0.1 and abs(platform_y) > 0.3 and platform_size > 1000 and platform_size < 2000:
+        if abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80:
             self.align_to_platform(platform_pos)
             return 0
 
@@ -104,7 +102,7 @@ def handle_exit(signum, frame):
     cmd_land.publish(Empty())
     cmd_pub.publish(controls.hold())
     sys.exit(0)
-#signal.signal(signal.SIGINT, handle_exit)
+
 
 
 #if called directly as main, process drone image and perform run
@@ -112,8 +110,8 @@ def drone_camera_callback(msg):
     img = bridge.imgmsg_to_cv2(msg, "bgr8")
     img = imutils.resize(img, width=500)
     platform_x = platformDetector.give_platform_x(img)
-    #platform_run.fly_to_platform(platform_x)
-    print("platform_x: ", platform_x)
+    platform_run.align_to_platform(platform_x)
+    #print("platform_x: ", platform_x)
 
 if __name__ == '__main__':
     rospy.init_node('platform_detection_run')
