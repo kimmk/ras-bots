@@ -27,6 +27,8 @@ import controls
 import platform_detector
 import platform_detection_run
 import lander
+import socket
+import threading
 
 
 bridge = CvBridge()
@@ -54,6 +56,27 @@ class main_control:
 
         self.start_search_timer = None
 
+        self.close_threads = False
+        self.recv_range_th = threading.Thread(target=self.recv_range)
+        self.recv_range_th.start()
+        self.last_range = None
+        self.wall_count = 0
+
+    def recv_range(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("192.168.50.255", 7171))
+        sock.settimeout(0.1)
+        lastPrint = 0
+        while not self.close_threads:
+            try:
+                self.last_range = (time.time(), int(sock.recv(1024)))
+                if time.time()-lastPrint > 0.1:
+                    print("range: {:.2f} {}".format(self.last_range[0],self.last_range[1]))
+                    lastPrint = time.time()
+            except socket.timeout:
+                pass
+        
+
     def run_start(self):
         time.sleep(1)
         self.jetbot_move_into_arena()
@@ -61,6 +84,9 @@ class main_control:
         self.both_scramble()
         #self.drone_search_target()
         #self.jetbot_move_to_target()
+
+        while self.wall_count < 2:
+            self.drone_creeping_line()
 
         while not self.drone_search_jetbot():
             pass
@@ -95,6 +121,21 @@ class main_control:
     def jetbot_move_to_target(self):
         ##drone has to mark or help finding this
         return 1
+
+    def drone_creeping_line(self):
+
+        if self.last_range is not None:
+            range_time, range = self.last_range
+            if time.time()-range_time < 2:
+                if range < 1500:
+                    self.cmd_vel.publish(controls.control(az=0.7))
+                    rospy.sleep(4)
+                    find_platform_flag = True
+                    self.wall_count += 1
+                else:
+                    self.cmd_vel.publish(controls.control(y=0.5))
+            else:
+                self.cmd_pub.publish(controls.hold())
 
     def drone_search_jetbot(self):
         while self.drone_image is None:
@@ -179,23 +220,24 @@ class main_control:
     #    img = bridge.imgmsg_to_cv2(msg, "bgr8")
     #    self.jetbot_image = img
 
-def handle_exit(signum, frame):
-    cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch=True)
-    cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
-    do_landing_pub = rospy.Publisher("/land/execute", Int8, queue_size=1)
-    rospy.sleep(1)
-    print("set to neutral + landing")
-    cmd_land.publish(Empty())
-    cmd_pub.publish(controls.hold())
-    do_landing_pub.publish(0)
-    rospy.sleep(1)
-    sys.exit(0)
+    def handle_exit(self, signum, frame):
+        self.close_threads = True
+        cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch=True)
+        cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
+        do_landing_pub = rospy.Publisher("/land/execute", Int8, queue_size=1)
+        rospy.sleep(1)
+        print("set to neutral + landing")
+        cmd_land.publish(Empty())
+        cmd_pub.publish(controls.hold())
+        do_landing_pub.publish(0)
+        rospy.sleep(1)
+        sys.exit(0)
 
 
 if __name__ == '__main__':
     rospy.init_node("carrier_run")
-    signal.signal(signal.SIGINT, handle_exit)
     MainControl = main_control()
+    signal.signal(signal.SIGINT, MainControl.handle_exit())
     MainControl.run_start()
 
     #rospy.on_shutdown(handle_exit(0,0))
