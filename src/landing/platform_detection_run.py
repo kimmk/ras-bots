@@ -20,7 +20,7 @@ import numpy as np
 import controls
 import signal
 from std_msgs.msg import Float64
-
+from tello_driver import TelloStatus
 
 from geometry_msgs.msg import Twist
 
@@ -45,13 +45,6 @@ class fly_to_platform:
     def align_to_platform(self, platform_pos):
         self.searctime = None
         platform_x, platform_y, platform_size = platform_pos
-
-
-        # if size small go down, if y is offset then forward or backwards, if x is offset then rotate
-        #if size small but platform is relatively centered, fly forward
-        #if size small and platform is below threshold, fly down
-
-        # this is when x is not aligned
         print("platform_pos: ", platform_pos)
         sx = 0
         sz = 0
@@ -59,12 +52,7 @@ class fly_to_platform:
 
 
         saz = platform_x/2.0
-
-        #if platform_size < 1500:
-        #    if abs(platform_y) > 0.8:
         sz = 1.0*(platform_size-70)/70.0
-        #    elif abs(platform_y) < 0.7:
-        #        sx = 0.5
         sx = 1.0*(-1)*(platform_y - 0.7)
         self.cmd_pub.publish(controls.control(az=saz, y=sx, z=sz))
         if abs(platform_x) < 0.1 and abs(platform_y) < 0.8 and abs(platform_y) > 0.6 and platform_size > 60 and platform_size < 80:
@@ -80,7 +68,7 @@ class fly_to_platform:
         self.searctime = None
         if platform_pos is None:
             return 0
-        if abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80:
+        elif abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80:
             self.align_to_platform(platform_pos)
             return 0
 
@@ -89,6 +77,29 @@ class fly_to_platform:
         sx = 1
         self.cmd_pub.publish(controls.control(y=sx))
         return 1
+
+    def pseudo_creeping_line_sp(self, platform_pos):
+        platform_x, platform_y, platform_size = platform_pos
+        find_platform_flag = False
+        if platform_pos is None and find_platform_flag is True:
+            return 0
+        elif abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80 and find_platform_flag is True:
+            self.align_to_platform(platform_pos)
+            return 0
+        
+        find_platform_flag = False
+        # once aligned, perform go forward, stop at wall using LIDAR and turn around, then find platform again
+        # lidar magic goes here, remember to set find_platform_flag True after turning around from wall
+        #sx = 1
+        #self.cmd_pub.publish(controls.control(y=sx))
+        # see_wall() => find_platform_flag = True
+
+
+
+        # exit the loop on battery low
+        # battery_low = rospy.Subscriber("/tello/status", Image, drone_status_callback)
+        # if battery_low is True:
+        #   return 1
 
 
 
@@ -103,6 +114,11 @@ def handle_exit(signum, frame):
     cmd_pub.publish(controls.hold())
     sys.exit(0)
 
+def drone_status_callback(msg):
+    if msg is None:
+        return True
+    else:
+        return msg.is_battery_low
 
 
 #if called directly as main, process drone image and perform run
