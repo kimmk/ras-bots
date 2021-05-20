@@ -31,8 +31,8 @@ debug_mode = 0
 class platformDetector:
     def __init__(self):
 
-        self.platform_brightness_threshold = 190
-        # self.platform_brightness_threshold = 140
+        #self.platform_brightness_threshold = 190
+        self.platform_brightness_threshold = 170
         
         #self.platform_x = rospy.Publisher("platform_x", Float64, queue_size=1) # Estimated x coord of platform
         #self.platform_dist = rospy.Publisher("platform_dist", Float64, queue_size=10)   # Estimated distance to platform
@@ -114,6 +114,11 @@ class platformDetector:
         blurred = cv2.medianBlur(gray, ksize= 3)
         
         thresh = cv2.threshold(blurred, self.platform_brightness_threshold, 255, cv2.THRESH_BINARY)[1]
+
+        mask = np.zeros(img.shape[:2], dtype="uint8")
+        h,w, _ = img.shape
+        cv2.rectangle(mask, (0, h/4), (w, h), 255, -1)
+        masked = cv2.bitwise_and(thresh, thresh, mask=mask)
         #laplacian = cv2.Laplacian(thresh,cv2.CV_32F)
         
         
@@ -124,7 +129,7 @@ class platformDetector:
         
         if devel_mode:
             self.imshow_bgr(gray)
-            self.imshow_bgr(thresh)
+            self.imshow_bgr(masked)
             #self.imshow_bgr(laplacian)
             #self.imshow_bgr(eroded)
             """
@@ -137,7 +142,7 @@ class platformDetector:
             #filtered = cv2.filter2D(blurred, -1, hor_kernel) 
             #self.imshow_bgr(laplacian)
             #"""
-        return thresh
+        return masked
 
     #in: cv2_image
     #out: % the platform x coord is off image center, 
@@ -176,15 +181,15 @@ class platformDetector:
 
         # Select largest platform feature from image
 
-        biggest_box = 0
+        biggest_box = 25
         platform_center = [0, 0, 0]
         approx = [0, 0]
         for idx, points in enumerate(im_cnts):
-            if len(points) < 20:
+            if len(points) < 2:
                 continue
                 
             x,y,w,h = cv2.boundingRect(points)
-            box_sz = w*h
+            box_sz = w
             if debug_mode:
                 if box_sz > biggest_box:
                     cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
