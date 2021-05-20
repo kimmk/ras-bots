@@ -20,7 +20,7 @@ import numpy as np
 import controls
 import signal
 from std_msgs.msg import Float64
-from tello_driver import TelloStatus
+#from tello_driver import TelloStatus
 
 from geometry_msgs.msg import Twist
 
@@ -31,6 +31,9 @@ class fly_to_platform:
         self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch=True)
         self.searctime = None
 
+        #self.recv_range_th = threading.Thread(target=self.recv_range)
+        #self.recv_range_th.start()
+
     ### search pattern: rotate in place, if didn't help jetbot is prolly under the drone, so fly backwards
     def search(self):
         if self.searctime is None:
@@ -40,7 +43,7 @@ class fly_to_platform:
             #self.cmd_pub.publish(controls.control(az = 0.5))
         else:
             self.cmd_pub.publish(controls.control(y = -0.4))
-
+            #self.cmd_pub.publish(controls.control(az = 0.4))
     ##### return 1 if alignment succeeded, 0 if still ongoing
     def align_to_platform(self, platform_pos):
         self.searctime = None
@@ -64,6 +67,8 @@ class fly_to_platform:
     #### platform_x = % of platform-x center off of image center
     #### return 1 if flying towards, 0 if still aligning
     def fly_over_platform(self, platform_pos):
+        if platform_pos is None:
+            return 0
         platform_x, platform_y, platform_size = platform_pos
         self.searctime = None
         if platform_pos is None:
@@ -114,11 +119,11 @@ def handle_exit(signum, frame):
     cmd_pub.publish(controls.hold())
     sys.exit(0)
 
-def drone_status_callback(msg):
-    if msg is None:
-        return True
-    else:
-        return msg.is_battery_low
+#def drone_status_callback(msg):
+#    if msg is None:
+#        return True
+#    else:
+#        return msg.is_battery_low
 
 
 #if called directly as main, process drone image and perform run
