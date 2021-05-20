@@ -18,6 +18,7 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float64
 from std_msgs.msg import Int8
 from std_msgs.msg import Empty
+from std_msgs.msg import String
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
 
@@ -38,6 +39,7 @@ class main_control:
 
         #rospy.Subscriber("/land/done", Int8, self.landing_callback)
         self.do_landing_pub = rospy.Publisher("/land/execute", Int8,  queue_size=1)
+        self.jetbot_move_pub = rospy.Publisher("/jetbot_move", String, queue_size=1)
 
         self.drone_image = None
         #self.jetbot_image = None
@@ -48,14 +50,16 @@ class main_control:
 
         self.cmd_land = rospy.Publisher('/tello/land', Empty, queue_size=1)
         self.cmd_takeoff = rospy.Publisher('/tello/takeoff', Empty, queue_size=1)
+        self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1)
 
         self.start_search_timer = None
 
     def run_start(self):
         time.sleep(1)
-        #self.jetbot_move_into_arena()
+        self.jetbot_move_into_arena()
+
+        self.both_scramble()
         #self.drone_search_target()
-        #self.drone_target_found()
         #self.jetbot_move_to_target()
 
         while not self.drone_search_jetbot():
@@ -63,23 +67,30 @@ class main_control:
 
         landed = self.drone_land()
 
-        while landed == 0:
+        if landed == 0:
             self.drone_new_approach()
             landed = self.drone_land()
-        self.jetbot_move_trough_target()
+        #self.jetbot_move_trough_target()
 
     def jetbot_move_into_arena(self):
-
-
+        self.jetbot_move_pub.publish("forward")
+        time.sleep(5)
         return 1
+
+    def both_scramble(self):
+        self.cmd_takeoff.publish(Empty())
+        time.sleep(4.0)
+        self.jetbot_move_pub.publish("circle")
+        self.cmd_pub.publish(controls.control(y = 0.7, az = 0.7))
+        time.sleep(4.0)
+        self.cmd_pub.publish(controls.hold())
+        time.sleep(1.0)
+
 
     def drone_search_target(self):
 
         return 1
 
-    def drone_target_found(self):
-
-        return 1
 
     def jetbot_move_to_target(self):
         ##drone has to mark or help finding this
@@ -149,6 +160,7 @@ class main_control:
 
     def drone_new_approach(self):
         self.cmd_takeoff.publish(Empty)
+        time.sleep(2.0)
         while not self.drone_search_jetbot():
             pass
         return 1
