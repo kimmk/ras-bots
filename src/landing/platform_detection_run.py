@@ -30,11 +30,12 @@ class fly_to_platform:
     def __init__(self):
         self.cmd_pub = rospy.Publisher('/tello/cmd_vel', Twist, queue_size=1, latch=True)
         self.searctime = None
+        self.reset_metronome()
 
         #self.recv_range_th = threading.Thread(target=self.recv_range)
         #self.recv_range_th.start()
 
-    ### search pattern: rotate in place, if didn't help jetbot is prolly under the drone, so fly backwards
+    ### search pattern: drone flies backwards, likely that the drone is over the platform
     def search(self):
         if self.searctime is None:
             self.searctime = time.time()
@@ -44,7 +45,32 @@ class fly_to_platform:
         else:
             self.cmd_pub.publish(controls.control(y = -0.4))
             #self.cmd_pub.publish(controls.control(az = 0.4))
-    ##### return 1 if alignment succeeded, 0 if still ongoing
+
+    ## "metronome" variable reset for rotation search
+    def reset_metronome(self):
+        self.metronome_sweepsize=7
+        self.metronome = 0
+        self.metronomedir = 1
+        self.anglediff = 0
+
+    ### "metronome" search pattern: drone rotates to both sides looking for the platform and flies slowly forward.
+    ### Since is is to be called during the pseudo creeping line, it's unlikely that the platform will be below it
+    def rotation_search(self):
+        self.cmd_pub.publish(controls.control(az = np.sign(self.metronomedir)*0.5 ))
+        time.sleep(0.3)
+        
+        self.metronome += self.metronomedir
+        print("metronome, dir", self.metronome, self.metronomedir)
+        
+        if abs(self.metronome) > self.metronome_sweepsize:
+            self.metronomedir = -self.metronomedir
+            self.metronome_sweepsize +=1
+            
+        if self.metronome == 0 and self.metronomedir == 1:
+            self.cmd_pub.publish(controls.control(y= -0.3))
+            print("go forward")
+        
+    ##### return 1 if alignment succeeded, 0 if still ongoing    
     def align_to_platform(self, platform_pos):
         self.searctime = None
         platform_x, platform_y, platform_size = platform_pos
@@ -83,28 +109,29 @@ class fly_to_platform:
         self.cmd_pub.publish(controls.control(y=sx))
         return 1
 
-    def pseudo_creeping_line_sp(self, platform_pos):
-        platform_x, platform_y, platform_size = platform_pos
-        find_platform_flag = False
-        if platform_pos is None and find_platform_flag is True:
-            return 0
-        elif abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80 and find_platform_flag is True:
-            self.align_to_platform(platform_pos)
-            return 0
+    ## Implemented in carrier_run.py
+    # def pseudo_creeping_line_sp(self, platform_pos):
+    #     platform_x, platform_y, platform_size = platform_pos
+    #     find_platform_flag = False
+    #     if platform_pos is None and find_platform_flag is True:
+    #         return 0
+    #     elif abs(platform_x) > 0.1 and abs(platform_y) > 0.8 and abs(platform_y) < 0.6 and platform_size > 60 and platform_size < 80 and find_platform_flag is True:
+    #         self.align_to_platform(platform_pos)
+    #         return 0
         
-        find_platform_flag = False
-        # once aligned, perform go forward, stop at wall using LIDAR and turn around, then find platform again
-        # lidar magic goes here, remember to set find_platform_flag True after turning around from wall
-        #sx = 1
-        #self.cmd_pub.publish(controls.control(y=sx))
-        # see_wall() => find_platform_flag = True
+    #     find_platform_flag = False
+    #     # once aligned, perform go forward, stop at wall using LIDAR and turn around, then find platform again
+    #     # lidar magic goes here, remember to set find_platform_flag True after turning around from wall
+    #     #sx = 1
+    #     #self.cmd_pub.publish(controls.control(y=sx))
+    #     # see_wall() => find_platform_flag = True
 
 
 
-        # exit the loop on battery low
-        # battery_low = rospy.Subscriber("/tello/status", Image, drone_status_callback)
-        # if battery_low is True:
-        #   return 1
+    #     # exit the loop on battery low
+    #     # battery_low = rospy.Subscriber("/tello/status", Image, drone_status_callback)
+    #     # if battery_low is True:
+    #     #   return 1
 
 
 

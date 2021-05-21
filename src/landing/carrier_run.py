@@ -126,7 +126,7 @@ class main_control:
 
                     find_platform_flag = True
                     self.wall_count += 1
-                    while not self.drone_search_jetbot():
+                    while not self.drone_search_jetbot(True):
                         self.jetbot_move_pub.publish("stop")
                         pass
                     self.jetbot_move_pub.publish("patrol")
@@ -139,7 +139,7 @@ class main_control:
             else:
                 self.cmd_pub.publish(controls.hold())
 
-    def drone_search_jetbot(self):
+    def drone_search_jetbot(self, creeping_line):
         while self.drone_image is None:
             time.sleep(1)
             print("no drone image")
@@ -149,7 +149,10 @@ class main_control:
                 self.start_search_timer = time.time()
             if time.time()- self.start_search_timer > 1:
                 print("searching")
-                self.platform_run.search()
+                if creeping_line is True:
+                    self.platform_run.rotation_search()
+                else:
+                    self.platform_run.search()
             return 0
             #self.drone_search_jetbot()
             #platform_pos = self.platformDetector.give_platform_x(self.drone_image)
@@ -179,12 +182,12 @@ class main_control:
 
         platform_pos = self.platformDetector.give_platform_x(self.drone_image)
         if platform_pos is None:
-            while not self.drone_search_jetbot():
+            while not self.drone_search_jetbot(False):
                 pass
         while not self.platform_run.fly_over_platform(platform_pos):
             platform_pos = self.platformDetector.give_platform_x(self.drone_image)
             if platform_pos is None:
-                while not self.drone_search_jetbot():
+                while not self.drone_search_jetbot(False):
                     pass
             print("realigning")
 
@@ -204,7 +207,7 @@ class main_control:
     def drone_new_approach(self):
         self.cmd_takeoff.publish(Empty)
         time.sleep(2.0)
-        while not self.drone_search_jetbot():
+        while not self.drone_search_jetbot(False):
             pass
         return 1
 
