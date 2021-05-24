@@ -20,7 +20,7 @@ from std_msgs.msg import Float64
 from std_msgs.msg import Empty
 import signal
 from sensor_msgs.msg import CompressedImage
-
+import copy
 
 bridge = CvBridge()
 
@@ -152,11 +152,12 @@ class platformDetector:
 
 
         # Filter 'platform' features from image
+        debug_img = img.copy()
         platform_img = self.filter_platforms(img)
-        #
+
         if devel_mode:
             self.imshow_bgr(platform_img)
-        
+        ih, iw, _ = img.shape
         # Get platform contours
         cnts, hiers = cv2.findContours(platform_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
 
@@ -201,21 +202,15 @@ class platformDetector:
                     #self.imshow_bgr(img)
             if box_sz > biggest_box:
                 biggest_box = box_sz
-                dh, dw, _ = img.shape
                 platform_center = [x+w//2,y+h//2, w]
-                platform_center[0] = (platform_center[0]-(dw/2.0))/(dw/2.0)
-                platform_center[1] = (platform_center[1] - (dh / 2.0)) / (dh / 2.0)
+                platform_center[0] = (platform_center[0]-(iw/2.0))/(iw/2.0)
+                platform_center[1] = (platform_center[1] - (ih / 2.0)) / (ih / 2.0)
                 perimeter = cv2.arcLength(points, closed=True)
                 approx = cv2.approxPolyDP(points, 0.07 * perimeter, closed=True)
 
-                cv2.drawContours(img, [approx], 0, (0, 255, 0), 2)
+
                 
-                cv2.putText(img,
-                    "platform_size: {:.2f}".format(w),
-                    (dw * 1 / 10, dh * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-                cv2.putText(img,
-                    "platform_pos: {:.2f} {:.2f}".format(platform_center[0],platform_center[1]),
-                    (dw * 1 / 10, dh * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+
         if len(approx) == 2:
             #print("idx==none" + str(platform_idx))
             self.platform_img.publish(bridge.cv2_to_imgmsg(img))
@@ -223,10 +218,14 @@ class platformDetector:
 
             return None
 
+        cv2.putText(debug_img,
+                    "platform_size: {:.2f}".format(platform_center[2]),
+                    (iw * 1 / 10, ih * 1 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+        cv2.putText(debug_img,
+                    "platform_pos: {:.2f} {:.2f}".format(platform_center[0], platform_center[1]),
+                    (iw * 1 / 10, ih * 2 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+        cv2.drawContours(debug_img, [approx], 0, (0, 255, 0), 2)
 
-
-        ih, iw, _ = img.shape
-        
         if debug_mode:
             print("x-% " + str(platform_center[0]))
         
@@ -234,7 +233,7 @@ class platformDetector:
             self.imshow_bgr(img)
 
         self.platform_img_bw.publish(bridge.cv2_to_imgmsg(platform_img))
-        self.platform_img.publish(bridge.cv2_to_imgmsg(img))
+        self.platform_img.publish(bridge.cv2_to_imgmsg(debug_img))
             
         return platform_center
         
