@@ -34,7 +34,7 @@ def rot_vel(vel, a):
 
 class Lander(object):
     def __init__(self):
-        P, I, D = 0.8, 0.0, 0.8
+        P, I, D = 8.0, 3.0, 10.0
         self.pid_x = PID(P, I, D)
         self.pid_y = PID(P, I, D)
         self.pid_x.output_limits = (-0.4, 0.4)
@@ -48,7 +48,7 @@ class Lander(object):
         self.debug_img = rospy.Publisher("/color_filter", Image, queue_size=10)
         
         self.backSub = cv2.createBackgroundSubtractorMOG2()
-        self.craft_entry_angle = None
+        
 
     def find_leds(self, img, hsv1_min, hsv1_max, hsv2_min = None, hsv2_max = None, debug_img=None):
 
@@ -133,7 +133,7 @@ class Lander(object):
     def find_craft_frame(self, img, debug_img = None):
         #img = cv2.medianBlur(img, ksize=3)
         img = cv2.boxFilter(img, -1, ksize=(5,5), normalize = False)
-        img = cv2.erode(img, kernel= cv2.getStructuringElement(shape = cv2.MORPH_RECT, ksize=(5,5)))
+        img = cv2.dilate(img, kernel= cv2.getStructuringElement(shape = cv2.MORPH_RECT, ksize=(8,8)))
         self.debug_img.publish(bridge.cv2_to_imgmsg(img))
         cnts = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -178,17 +178,21 @@ class Lander(object):
 
         # Calculate initial velocity vector
         ih, iw, _ = img.shape
+        
+        pidx= x*1.0/iw
+        pidy = y*1.0/ih
+        
+        self.pid_x.setpoint = land_pos[0]
+        self.pid_y.setpoint = land_pos[1]
 
-        self.pid_x.setpoint = iw * land_pos[0]
-        self.pid_y.setpoint = ih * land_pos[1]
-
-        dx = self.pid_x(x)
-        dy = self.pid_y(y)
+        dx = self.pid_x(pidx)
+        dy = self.pid_y(pidy)
         v = np.array([-dy,dx])
+        print(v)
 
         # Normalize velocity vector
-        norm = np.linalg.norm(v)
-        v = v / norm
+        #norm = np.linalg.norm(v*1.0)
+        #v = v / norm
 
         # Apply height modifier and generic velocity multiplier
         v = (1.0 - (1.0 / (h + 1.0))) * 1.0 * v
@@ -200,7 +204,7 @@ class Lander(object):
         if debug_img is not None:
             dh, dw, _ = debug_img.shape
             #draw center and drone pos
-            cv2.circle(debug_img, (int(self.pid_x.setpoint), int(self.pid_y.setpoint)), 5, (80, 255, 255), 2)
+            cv2.circle(debug_img, (int(self.pid_x.setpoint*iw), int(self.pid_y.setpoint*ih)), 5, (80, 255, 255), 2)
             cv2.circle(debug_img, (x, y), dw//80, (255, 255, 80), 2)
             cv2.putText(debug_img,
                         "xy: {:.2f} {:.2f}".format(float(x) / iw, float(y) / ih),
@@ -210,9 +214,10 @@ class Lander(object):
 
             cv2.putText(debug_img, "vel: {:.2f} {:.2f}".format(vr[0], vr[1]),
                         (dw * 1 / 10, dh * 9 / 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-
+            
+            
             fva = (dw // 2, dh * 4 // 5)
-            fvb = (fva[0] + int(vr[0] * 20), fva[1] + int(-vr[1] * 20))
+            fvb = (fva[0] + int(vr[0] * 100), fva[1] + int(-vr[1] * 100))
             cv2.line(debug_img, fva, fvb, (255, 255, 0), 2)
             cv2.circle(debug_img, fva, 2, (255, 255, 255), -1)
             cv2.line(debug_img, fva, (fva[0],fva[1]-15), (0,0,255), 1)
@@ -236,33 +241,37 @@ class Lander(object):
         #fgMask = self.backSub.apply(img)
         return drone_area
 
-    # land the drone, and when landed take an image, this is now the empty background
+    # when backround is set, the drone should see the jetbot -> jetbot can't see the drone
     # in: camera image (HSV)
     # out: 0 if process not complete
     #     1 if background set
     # set: self.background_img for further use
     def init_background(self, img):
-        secs_to_land = 4
+        stability_wait = 1
         if self.background_img is not None:
             return 1
         if self.background_init_timer is None:
             self.background_init_timer = time.time()
-            self.land()
+            #self.land()
             return 0
-        if time.time() - self.background_init_timer < secs_to_land:
+        if time.time() - self.background_init_timer < stability_wait:
             return 0
 
         #store as grayscale (HSV V channel)
         img_channels = cv2.split(img)
         self.background_img = img_channels[2]
-        self.takeoff()
-        time.sleep(2)
+        #self.takeoff()
+        #time.sleep(2)
         print("bg image ready")
         return 1
 
+
+    
     def reset_background(self):
         self.background_img = None
         self.background_init_timer = None
+        self.craft_entry_angle = None
+        
 
     def land(self):
         self.cmd_vel.publish(controls.hold())
@@ -272,8 +281,8 @@ class Lander(object):
 
     def takeoff(self):
         self.cmd_takeoff.publish(Empty())
-
-
+        pass
+        
 #########################################################################
 ### NOTE: Everything below from here is debug code and may be removed ###
 #########################################################################
