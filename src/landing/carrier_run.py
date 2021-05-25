@@ -115,9 +115,9 @@ class MainControl:
             print("turn around")
             self.jetbot_move_pub.publish("stop")
             if self.wall_count % 2 == 0:
-                self.cmd_pub.publish(controls.control(az=-1))
-            else:
                 self.cmd_pub.publish(controls.control(az=1))
+            else:
+                self.cmd_pub.publish(controls.control(az=-1))
             time.sleep(3.5)
             self.wall_count += 1
             while not self.drone_search_jetbot(True):
@@ -232,6 +232,7 @@ class MainControl:
 
 
     def drone_new_approach(self):
+        print("new approach")
         self.cmd_takeoff.publish(Empty)
         time.sleep(2.0)
         while not self.drone_search_jetbot(False):

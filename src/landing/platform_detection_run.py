@@ -36,7 +36,7 @@ class fly_to_platform:
         P, I, D = 8.0, 3.0, 10.0
         self.align_pid_angle = PID(P, I, D)
         self.align_pid_dist = PID(P, I, D)
-        self.align_pid_height = PID(P, I, D)
+        self.align_pid_height = PID(P+2.0, I, D)
         self.align_pid_angle.output_limits = (-0.4, 0.4)
         self.align_pid_dist.output_limits = (-0.4, 0.4)
         self.align_pid_height.output_limits = (-0.4, 0.4)
@@ -99,7 +99,7 @@ class fly_to_platform:
         sz = 0.75*(platform_size-70)/70.0
         sy = 1.0*(-1)*(platform_y - 0.7)
 
-        saz = self.align_pid_angle(platform_x)
+        saz = self.align_pid_angle(-platform_x)
         sz = self.align_pid_height(platform_y)
         sy = self.align_pid_dist(platform_size)
 
