@@ -71,7 +71,7 @@ class MainControl:
 
         #self.both_scramble()
 
-        #self.cmd_takeoff.publish(Empty())
+        self.cmd_takeoff.publish(Empty())
         time.sleep(2)
         self.jetbot_move_pub.publish("patrol")
 
@@ -270,6 +270,7 @@ class DroneLidar:
                     lastPrint = time.time()
             except socket.timeout:
                 pass
+        print("bye bye lidar")
     # uses last_range to determine if its detecting a wall
     #return 0 if no wall
     #       1 if definitely a wall
@@ -294,7 +295,7 @@ class DroneLidar:
             time_elapsed = time.time()-self.walltime
             if time_elapsed > 1:
                 return 1
-            if time_elapsed > 0.2:
+            if time_elapsed > 0.1:
                 return 2
         else:
             self.walltime = None
