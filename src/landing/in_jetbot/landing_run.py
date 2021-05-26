@@ -40,13 +40,13 @@ robot = Robot()
 class JetbotMove():
     def __init__(self):
         rospy.Subscriber("/jetbot_move", String , self.move_command_callback)
-        self.last_partol_call = time.time()
+        self.last_patrol_call = time.time()
         
     
     
     def circle_around(self):
-        robot.set_motors(-0.35, -0.35)
-        robot.set_motors(-0.3, -0.6)
+        robot.set_motors(0.35, 0.35)
+        robot.set_motors(0.3, 0.6)
         time.sleep(3.0)
         robot.stop()
         
@@ -55,9 +55,9 @@ class JetbotMove():
     def forward(self):
         #robot.forward(-0.35)
         #robot.forward(-0.2)
-        robot.set_motors(-0.35, -0.35)
-        robot.set_motors(-0.21, -0.20)
-        time.sleep(4.0)
+        robot.set_motors(0.35, 0.35)
+        robot.set_motors(0.20, 0.21)
+        time.sleep(1.0)
         robot.stop()
         
     
@@ -65,8 +65,8 @@ class JetbotMove():
         #if spamming patrol the jumpstart current would make it run fast
         if time.time()-self.last_patrol_call > 1:
             self.last_patrol_call = time.time()
-            robot.set_motors(-0.35, -0.35)
-        robot.set_motors(-0.18, -0.17)
+            robot.set_motors(0.35, 0.35)
+        robot.set_motors(0.17, 0.18)
         
     def stop(self):
         robot.stop()
@@ -249,7 +249,7 @@ def handle_exit(signum, frame):
 
 
 if __name__ == '__main__':
-    rospy.init_node('landing_test', anonymous=True)
+    rospy.init_node('carrier_run_jetbot', anonymous=True)
     signal.signal(signal.SIGINT, handle_exit)
     jetbotMove = JetbotMove()
     landing_process = LandingProcess()
