@@ -1,0 +1,8 @@
+# Define the goal
+# ?no goal needed, just land
+---
+# Define the result
+uint32 landing_complete   #give 1 when colmplete
+---
+# Define a feedback message
+float32 landing_height  #height the drone is currently at, should be dropping constantly
